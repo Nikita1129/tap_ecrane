@@ -2,7 +2,7 @@
 <html lang="ro">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=1920">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Taproom TV</title>
 <!--
   Taproom TV player. Static, no framework, no build step.
@@ -19,8 +19,10 @@
     --display:"Oswald","Bebas Neue","Impact","Arial Narrow",sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--font)}
-  body{display:grid;grid-template-columns:1400px 520px;grid-template-rows:960px 120px}
+  html,body{width:100%;height:100%;overflow:hidden;background:#000;color:var(--ink);font-family:var(--font)}
+  /* Fixed 1920x1080 design, scaled to whatever the screen actually is (JS sets the transform). */
+  #app{position:absolute;left:0;top:0;width:1920px;height:1080px;background:var(--bg);transform-origin:0 0;
+       display:grid;grid-template-columns:1400px 520px;grid-template-rows:960px 120px}
 
   /* ---- poster stage ---- */
   #stage{position:relative;width:1400px;height:960px;background:#000;overflow:hidden}
@@ -63,11 +65,12 @@
   body.debug #dbg{display:block}
 
   /* ---- preview mode (admin iframe): only the poster stage, 1400x960 ---- */
-  body.preview{width:1400px;height:960px;display:block}
+  body.preview #app{width:1400px;height:960px;display:block;transform:none!important;left:0!important;top:0!important}
   body.preview #side,body.preview #band{display:none}
 </style>
 </head>
 <body>
+<div id="app">
   <div id="stage"></div>
   <aside id="side"><h2>Următoarele meciuri</h2><div id="fxlist"></div></aside>
   <footer id="band">
@@ -75,6 +78,7 @@
     <div id="next"></div>
     <div id="clock">--:--</div>
   </footer>
+</div>
   <div id="dbg"></div>
 
 <script>
@@ -280,6 +284,17 @@
       ' showable-cycle: '+state.cycle.length+'\nidx: '+state.idx+' '+(s?(s.id+' '+s.type+' '+(s.secs||12)+'s'):'')+
       '\npaused: '+state.paused+'\nbroken: '+Object.keys(broken).join(',');
   }
+
+  /* ---------- scale the 1920x1080 design to the real screen ---------- */
+  function fit(){
+    if (PREVIEW) return;
+    var app = document.getElementById('app');
+    var s = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+    app.style.transform = 'scale('+s+')';
+    app.style.left = Math.round((window.innerWidth - 1920*s)/2)+'px';
+    app.style.top  = Math.round((window.innerHeight - 1080*s)/2)+'px';
+  }
+  fit(); window.addEventListener('resize', fit);
 
   /* ---------- keys ---------- */
   document.addEventListener('keydown', function(e){

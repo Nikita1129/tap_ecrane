@@ -19,6 +19,7 @@ export default function PosterEditor({
   const set = <K extends keyof Slide>(k: K, v: Slide[K]) => onChange({ ...slide, [k]: v });
   const [pillDraft, setPillDraft] = useState("");
   const [upl, setUpl] = useState<{ busy: boolean; msg: string; err: boolean }>({ busy: false, msg: "", err: false });
+  const [fit, setFit] = useState<"cover" | "contain">("cover");
   const fileRef = useRef<HTMLInputElement>(null);
 
   function addPill() {
@@ -42,6 +43,7 @@ export default function PosterEditor({
       setUpl({ busy: true, msg: "Se încarcă…", err: false });
       const fd = new FormData();
       fd.append("file", blob, "upload.jpg");
+      fd.append("fit", fit);
       const r = await fetch("/api/upload", { method: "POST", body: fd });
       const j = (await r.json()) as { img?: string; error?: string };
       if (!r.ok || !j.img) throw new Error(j.error || `HTTP ${r.status}`);
@@ -81,6 +83,20 @@ export default function PosterEditor({
 
         {slide.type === "image" && (
           <>
+            <label className="f">Încadrare</label>
+            <div className="seg">
+              <button className={fit === "cover" ? "on" : ""} onClick={() => setFit("cover")}>
+                Umple ecranul
+              </button>
+              <button className={fit === "contain" ? "on" : ""} onClick={() => setFit("contain")}>
+                Imaginea întreagă
+              </button>
+            </div>
+            <div className="hint">
+              {fit === "cover"
+                ? "Pentru poze: umple tot 1400×960, marginile se taie."
+                : "Pentru postere desenate: nimic nu se taie, apar benzi întunecate unde nu încape."}
+            </div>
             <label className="f">Imagine</label>
             <div className="upload">
               <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/heic,image/heif,image/*" onChange={onFile} />
@@ -88,7 +104,7 @@ export default function PosterEditor({
                 {upl.busy ? upl.msg : slide.img ? "Schimbă poza" : "Alege o poză"}
               </button>
               <div className={"hint" + (upl.err ? " err" : "")} style={{ marginTop: 8 }}>
-                {upl.busy ? "" : upl.msg || "JPG, PNG sau HEIC, max 15 MB. Se decupează automat la 1400×960."}
+                {upl.busy ? "" : upl.msg || "JPG, PNG sau HEIC, max 15 MB. Alege încadrarea înainte de a încărca."}
               </div>
             </div>
           </>

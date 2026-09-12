@@ -22,10 +22,12 @@ export async function POST(req: NextRequest) {
   if (!requestIsAuthed(req)) return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
 
   let file: File | null = null;
+  let fit = "cover";
   try {
     const form = await req.formData();
     const f = form.get("file");
     if (f instanceof File) file = f;
+    if (form.get("fit") === "contain") fit = "contain";
   } catch {
     return NextResponse.json({ error: "Formular invalid" }, { status: 400 });
   }
@@ -35,9 +37,14 @@ export async function POST(req: NextRequest) {
   const input = Buffer.from(await file.arrayBuffer());
   let out: Buffer;
   try {
+    // "cover": fill 1400x960, crop the overflow (photos).
+    // "contain": whole image visible, dark bands where it does not fit (designed posters).
+    const contain = fit === "contain";
     out = await sharp(input, { failOn: "none" })
       .rotate() // honour EXIF orientation from phone cameras
-      .resize(TV_W, TV_H, { fit: "cover", position: "centre" })
+      .resize(TV_W, TV_H, contain
+        ? { fit: "contain", background: { r: 11, g: 10, b: 9 } }
+        : { fit: "cover", position: "centre" })
       .jpeg({ quality: 80, mozjpeg: true })
       .toBuffer();
   } catch (e) {
