@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920">
+<title>Taproom TV</title>
+<!--
+  STAND-IN PLAYER.
+  The original taproom-tv.html was not in the repository when this was built.
+  This file implements the layout described in the brief (73% poster, 27%
+  fixtures, bottom band, red 15 min before kickoff, ?debug=1, remote keys)
+  and the new data loader. When the original file is provided, replace
+  everything ABOVE the "DATA LOADING" marker with the original CSS/markup and
+  keep the block below it. The block below is the only part the backend needs.
+-->
+<style>
+  :root{
+    --bg:#0b0a09; --panel:#151311; --line:#2a2622;
+    --ink:#f3ede4; --muted:#a79d90;
+    --amber:#f2a93b; --ember:#e2492e; --accent:var(--amber);
+    --font:"Inter","Segoe UI",Roboto,Arial,sans-serif;
+    --display:"Oswald","Bebas Neue","Impact","Arial Narrow",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--font)}
+  body{display:grid;grid-template-columns:1400px 520px;grid-template-rows:960px 120px}
+
+  /* ---- poster stage ---- */
+  #stage{position:relative;width:1400px;height:960px;background:#000;overflow:hidden}
+  #stage img{position:absolute;inset:0;width:1400px;height:960px;object-fit:cover;display:block}
+  .poster{position:absolute;inset:0;padding:96px 110px;display:flex;flex-direction:column;justify-content:center;gap:28px;
+          background:linear-gradient(160deg,#1c1815 0%,#0e0c0a 100%)}
+  .poster.hot{--accent:var(--ember)}
+  .poster .kicker{font-size:34px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .poster .title{font-family:var(--display);font-size:128px;line-height:.98;font-weight:700;text-transform:uppercase;letter-spacing:.005em;
+                 overflow-wrap:anywhere}
+  .poster .sub{font-size:44px;line-height:1.25;color:var(--muted);max-width:1100px}
+  .poster .pills{display:flex;flex-wrap:wrap;gap:16px;margin-top:12px}
+  .poster .pill{border:3px solid var(--accent);color:var(--accent);border-radius:999px;padding:10px 26px;font-size:30px;font-weight:600;letter-spacing:.04em}
+  .poster .bar{position:absolute;left:110px;bottom:72px;width:180px;height:10px;background:var(--accent)}
+
+  /* ---- fixtures column ---- */
+  #side{background:var(--panel);border-left:2px solid var(--line);padding:44px 40px;display:flex;flex-direction:column}
+  #side h2{font-family:var(--display);font-size:40px;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);margin-bottom:26px}
+  .fx{border-top:2px solid var(--line);padding:22px 0}
+  .fx:last-child{border-bottom:2px solid var(--line)}
+  .fx .when{font-size:24px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+  .fx .teams{font-size:34px;font-weight:700;line-height:1.15}
+  .fx .comp{font-size:22px;color:var(--muted);margin-top:6px}
+  .fx.live .when{color:var(--ember);font-weight:700}
+  #side .empty{color:var(--muted);font-size:26px}
+
+  /* ---- bottom band ---- */
+  #band{grid-column:1 / span 2;display:grid;grid-template-columns:520px 1fr 260px;align-items:center;padding:0 48px;
+        background:var(--panel);border-top:2px solid var(--line)}
+  #band.alert{background:var(--ember);color:#fff}
+  #brand{font-family:var(--display);font-size:44px;letter-spacing:.08em;text-transform:uppercase}
+  #brand small{display:block;font-family:var(--font);font-size:18px;letter-spacing:.3em;color:var(--muted)}
+  #band.alert #brand small{color:#ffd9d2}
+  #next{font-size:32px;text-align:center}
+  #next b{font-weight:700}
+  #clock{font-family:var(--display);font-size:56px;text-align:right;font-variant-numeric:tabular-nums}
+
+  /* ---- debug ---- */
+  #dbg{display:none;position:absolute;left:12px;top:12px;background:rgba(0,0,0,.75);color:#9f9;font:16px/1.4 monospace;padding:10px 14px;white-space:pre;z-index:9}
+  body.debug #dbg{display:block}
+
+  /* ---- preview mode (admin iframe): only the poster stage, 1400x960 ---- */
+  body.preview{width:1400px;height:960px;display:block}
+  body.preview #side,body.preview #band{display:none}
+</style>
+</head>
+<body>
+  <div id="stage"></div>
+  <aside id="side"><h2>Următoarele meciuri</h2><div id="fxlist"></div></aside>
+  <footer id="band">
+    <div id="brand">Taproom<small>by Litra &amp; Friends</small></div>
+    <div id="next"></div>
+    <div id="clock">--:--</div>
+  </footer>
+  <div id="dbg"></div>
+
+<script>
+/* =========================================================================
+   DATA LOADING  (this block is the backend integration; keep it as-is)
+   - fetches /api/content every 5 minutes
+   - caches the last good response in localStorage
+   - never blanks: cache -> seed, in that order, if the network is down
+   - preloads images and keeps them in memory
+   - ?preview=1 : render a single slide sent via postMessage, no rotation
+   - ?debug=1   : overlay with state
+   - remote keys: ArrowRight/ArrowLeft = next/prev, Enter = pause
+   ========================================================================= */
+(function(){
+  var API = '/api/content';
+  var POLL_MS = 5*60*1000;
+  var CACHE_KEY = 'tv_content_v1';
+  var ALERT_BEFORE_MIN = 15;
+  var qs = new URLSearchParams(location.search);
+  var PREVIEW = qs.get('preview') === '1';
+  var DEBUG = qs.get('debug') === '1';
+  if (PREVIEW) document.body.classList.add('preview');
+  if (DEBUG) document.body.classList.add('debug');
+
+  // Seed: last line of defence when there is no cache and no network.
+  var SEED = { slides: [
+    { id:'seed', type:'text', active:true, kicker:'Taproom by Litra & Friends', title:'Bere artizanală. BBQ. Fotbal.',
+      sub:'', pills:[], hot:false, from:'', to:'', hours:'', days:[], prio:3, secs:15 }
+  ], fixtures: [] };
+
+  var state = { content:null, source:'none', lastOk:null, lastErr:null, cycle:[], idx:-1, paused:false, timer:null };
+  var images = {};            // img url -> HTMLImageElement (kept alive on purpose)
+  var broken = {};            // img url -> true when it failed to load
+
+  /* ---------- schedule (mirror of src/lib/schedule.ts) ---------- */
+  function pad(n){ return (n<10?'0':'')+n; }
+  function ymd(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  function isoDay(d){ var j=d.getDay(); return j===0?7:j; }
+  function inWindow(s, now){
+    var today = ymd(now);
+    if (s.from && today < s.from) return false;
+    if (s.to && today > s.to) return false;
+    if (s.days && s.days.length && s.days.indexOf(isoDay(now))<0) return false;
+    if (s.hours){
+      var m = /^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/.exec(s.hours);
+      if (m){
+        var a=+m[1]*60+ +m[2], b=+m[3]*60+ +m[4], t=now.getHours()*60+now.getMinutes();
+        var inside = a<=b ? (t>=a && t<b) : (t>=a || t<b);
+        if (!inside) return false;
+      }
+    }
+    return true;
+  }
+  function isShowable(s, now){
+    if (!s.active) return false;
+    if (!inWindow(s, now)) return false;
+    if (s.type==='image' && (!s.img || broken[s.img])) return false;
+    if (s.type==='text' && !s.title && !s.kicker && !s.sub) return false;
+    return true;
+  }
+  // prio = weight: a slide appears `prio` times per cycle, spread out, array order kept.
+  function buildCycle(slides, now){
+    var live = slides.filter(function(s){ return isShowable(s, now); });
+    var out = [];
+    for (var round=1; round<=5; round++)
+      for (var i=0;i<live.length;i++) if ((live[i].prio||3) >= round) out.push(live[i]);
+    return out;
+  }
+
+  /* ---------- rendering ---------- */
+  var stage = document.getElementById('stage');
+  function el(tag, cls, text){ var e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; }
+  function renderSlide(s){
+    while (stage.firstChild) stage.removeChild(stage.firstChild);
+    if (s.type==='image'){
+      var im = images[s.img];
+      if (!im){ im = new Image(); im.src = s.img; images[s.img]=im; }
+      stage.appendChild(im);
+      return;
+    }
+    var p = el('div','poster'+(s.hot?' hot':''));
+    if (s.kicker) p.appendChild(el('div','kicker',s.kicker));
+    if (s.title)  p.appendChild(el('div','title',s.title));
+    if (s.sub)    p.appendChild(el('div','sub',s.sub));
+    if (s.pills && s.pills.length){
+      var pills = el('div','pills');
+      s.pills.forEach(function(t){ pills.appendChild(el('span','pill',t)); });
+      p.appendChild(pills);
+    }
+    p.appendChild(el('div','bar'));
+    stage.appendChild(p);
+  }
+  function preload(slides){
+    slides.forEach(function(s){
+      if (s.type!=='image' || !s.img || images[s.img]) return;
+      var im = new Image();
+      im.onload = function(){ delete broken[s.img]; };
+      im.onerror = function(){ broken[s.img]=true; };
+      im.src = s.img;
+      images[s.img] = im;
+    });
+  }
+
+  function parseKick(k){ // "YYYY-MM-DDTHH:MM" local
+    var m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(k||''); if(!m) return null;
+    return new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]);
+  }
+  var RO_D=['Dum','Lun','Mar','Mie','Joi','Vin','Sâm'];
+  function fmtWhen(d, now){
+    var hm = pad(d.getHours())+':'+pad(d.getMinutes());
+    if (ymd(d)===ymd(now)) return 'Azi '+hm;
+    var tom = new Date(now); tom.setDate(tom.getDate()+1);
+    if (ymd(d)===ymd(tom)) return 'Mâine '+hm;
+    return RO_D[d.getDay()]+' '+d.getDate()+'.'+pad(d.getMonth()+1)+' '+hm;
+  }
+  function upcoming(fixtures, now){
+    var cutoff = now.getTime() - 2*3600*1000; // keep a match visible ~2h after kickoff
+    return fixtures.map(function(f){ return {f:f, d:parseKick(f.kick)}; })
+      .filter(function(x){ return x.d && x.d.getTime() > cutoff; })
+      .sort(function(a,b){ return a.d-b.d; });
+  }
+  function renderFixtures(){
+    var now = new Date();
+    var list = upcoming(state.content.fixtures||[], now).slice(0,5);
+    var box = document.getElementById('fxlist');
+    while (box.firstChild) box.removeChild(box.firstChild);
+    if (!list.length){ box.appendChild(el('div','empty','Niciun meci programat')); }
+    list.forEach(function(x){
+      var live = x.d.getTime() <= now.getTime();
+      var row = el('div','fx'+(live?' live':''));
+      row.appendChild(el('div','when', live ? 'LIVE · '+fmtWhen(x.d,now) : fmtWhen(x.d,now)));
+      row.appendChild(el('div','teams', x.f.home+' – '+x.f.away));
+      if (x.f.comp) row.appendChild(el('div','comp', x.f.comp));
+      box.appendChild(row);
+    });
+    // bottom band
+    var nxt = list.filter(function(x){ return x.d.getTime() > now.getTime(); })[0] || list[0];
+    var nextEl = document.getElementById('next'), band=document.getElementById('band');
+    while (nextEl.firstChild) nextEl.removeChild(nextEl.firstChild);
+    var alert = false;
+    if (nxt){
+      var diffMin = (nxt.d.getTime()-now.getTime())/60000;
+      alert = diffMin <= ALERT_BEFORE_MIN && diffMin > -1;
+      nextEl.appendChild(el('span',null, alert ? 'ÎNCEPE ÎN '+Math.max(1,Math.ceil(diffMin))+' MIN · ' : 'Următorul meci: '));
+      nextEl.appendChild(el('b',null, nxt.f.home+' – '+nxt.f.away));
+      nextEl.appendChild(el('span',null,' · '+fmtWhen(nxt.d,now)));
+    }
+    band.classList.toggle('alert', alert);
+  }
+  function tickClock(){
+    var d=new Date();
+    document.getElementById('clock').textContent = pad(d.getHours())+':'+pad(d.getMinutes());
+  }
+
+  /* ---------- rotation ---------- */
+  function rebuild(){
+    state.cycle = buildCycle(state.content.slides||[], new Date());
+    if (!state.cycle.length) state.cycle = buildCycle(SEED.slides, new Date());
+    if (state.idx >= state.cycle.length) state.idx = -1;
+  }
+  function show(step){
+    if (state.timer){ clearTimeout(state.timer); state.timer=null; }
+    rebuild();
+    var n = state.cycle.length;
+    state.idx = ((state.idx + step) % n + n) % n;
+    var s = state.cycle[state.idx];
+    renderSlide(s);
+    if (!state.paused) state.timer = setTimeout(function(){ show(1); }, Math.max(3,(s.secs||12))*1000);
+    debug();
+  }
+
+  /* ---------- loading ---------- */
+  function apply(content, source){
+    var changed = !state.content || JSON.stringify(state.content) !== JSON.stringify(content);
+    state.content = content; state.source = source;
+    if (changed){ preload(content.slides||[]); renderFixtures(); rebuild(); }
+  }
+  function loadCache(){
+    try { var raw = localStorage.getItem(CACHE_KEY); if (raw) return JSON.parse(raw); } catch(e){}
+    return null;
+  }
+  function saveCache(c){ try { localStorage.setItem(CACHE_KEY, JSON.stringify(c)); } catch(e){} }
+  function fetchContent(){
+    var ctrl = ('AbortController' in window) ? new AbortController() : null;
+    var to = ctrl && setTimeout(function(){ ctrl.abort(); }, 20000);
+    fetch(API + '?t=' + Date.now(), { cache:'no-store', signal: ctrl && ctrl.signal })
+      .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+      .then(function(c){
+        if (!c || !Array.isArray(c.slides)) throw new Error('bad payload');
+        state.lastOk = new Date(); state.lastErr = null;
+        saveCache(c); apply(c,'api'); debug();
+      })
+      .catch(function(e){ state.lastErr = String(e && e.message || e); debug(); })
+      .then(function(){ if (to) clearTimeout(to); });
+  }
+
+  function debug(){
+    if (!DEBUG) return;
+    var s = state.cycle[state.idx];
+    document.getElementById('dbg').textContent =
+      'source: '+state.source+'\nlastOk: '+(state.lastOk?state.lastOk.toLocaleTimeString():'-')+
+      '\nlastErr: '+(state.lastErr||'-')+'\nslides: '+((state.content&&state.content.slides)||[]).length+
+      ' showable-cycle: '+state.cycle.length+'\nidx: '+state.idx+' '+(s?(s.id+' '+s.type+' '+(s.secs||12)+'s'):'')+
+      '\npaused: '+state.paused+'\nbroken: '+Object.keys(broken).join(',');
+  }
+
+  /* ---------- keys ---------- */
+  document.addEventListener('keydown', function(e){
+    if (e.key==='ArrowRight'){ show(1); e.preventDefault(); }
+    else if (e.key==='ArrowLeft'){ show(-1); e.preventDefault(); }
+    else if (e.key==='Enter'){ state.paused=!state.paused; show(0); e.preventDefault(); }
+  });
+
+  /* ---------- boot ---------- */
+  if (PREVIEW){
+    // Admin sends { type:'tv-preview', slide } ; we render it and stop.
+    window.addEventListener('message', function(ev){
+      var d = ev.data;
+      if (!d || d.type!=='tv-preview' || !d.slide) return;
+      renderSlide(d.slide);
+    });
+    renderSlide(SEED.slides[0]);
+    return;
+  }
+
+  var cached = loadCache();
+  if (cached && Array.isArray(cached.slides)) apply(cached,'cache'); else apply(SEED,'seed');
+  tickClock(); show(1);
+  fetchContent();
+  setInterval(fetchContent, POLL_MS);
+  setInterval(tickClock, 15*1000);
+  setInterval(renderFixtures, 30*1000);
+  // Date/hour windows change while the page runs; rebuild the cycle every minute.
+  setInterval(function(){ rebuild(); if (state.idx<0 || !state.cycle.length) show(1); }, 60*1000);
+})();
+</script>
+</body>
+</html>
