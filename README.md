@@ -16,6 +16,11 @@ content JSON and the uploaded images. No database.
 | `ADMIN_PASSWORD` | yes      | The one shared password for `/admin`.                                                         |
 | `SESSION_SECRET` | no       | Signs the 30-day login cookie. If empty it is derived from the password, so changing the password logs every phone out. |
 
+Leave the "Secret" checkbox off when adding these: a variable stored as
+secret was silently dropped on this team's plan and the admin then reports
+"ADMIN_PASSWORD nu este setat". After changing a variable, trigger a new
+deploy; functions only pick up variables at build time.
+
 Netlify Blobs needs no configuration. The two stores (`content`, `images`) are
 created on first write.
 
