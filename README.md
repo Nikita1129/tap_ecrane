@@ -102,7 +102,8 @@ on Android use JPG.
 
 ## The player file
 
-`public/tv.html` is served at `/tv`. Only the block after the
-`DATA LOADING` marker talks to the backend. If you replace the visual part
-with a different design, keep that block and the element ids it uses
-(`#stage`, `#fxlist`, `#next`, `#band`, `#clock`, `#dbg`).
+`public/tv.html` is served at `/tv`. It is plain HTML and CSS; the design
+(colours, fonts, sizes) is at the top of the file and can be edited without
+touching anything else. Only the block after the `DATA LOADING` marker talks
+to the backend. If you restyle the page, keep that block and the element ids
+it uses (`#stage`, `#fxlist`, `#next`, `#band`, `#clock`, `#dbg`).

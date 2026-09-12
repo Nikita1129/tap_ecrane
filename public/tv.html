@@ -5,13 +5,10 @@
 <meta name="viewport" content="width=1920">
 <title>Taproom TV</title>
 <!--
-  STAND-IN PLAYER.
-  The original taproom-tv.html was not in the repository when this was built.
-  This file implements the layout described in the brief (73% poster, 27%
-  fixtures, bottom band, red 15 min before kickoff, ?debug=1, remote keys)
-  and the new data loader. When the original file is provided, replace
-  everything ABOVE the "DATA LOADING" marker with the original CSS/markup and
-  keep the block below it. The block below is the only part the backend needs.
+  Taproom TV player. Static, no framework, no build step.
+  Layout: 1400x960 poster stage, 520px fixtures column, 120px bottom band.
+  The block after the "DATA LOADING" marker is the only part that talks to the
+  backend; keep it (and the element ids it uses) if you restyle the page.
 -->
 <style>
   :root{
