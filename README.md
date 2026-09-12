@@ -27,7 +27,9 @@ created on first write.
 ## Deploy
 
 1. Push this repo to GitHub and connect it in Netlify (build command and publish
-   directory are already in `netlify.toml`).
+   directory are already in `netlify.toml`). On the free plan, link your GitHub
+   account under Netlify → Team settings → Git contributors, otherwise every
+   build fails with "unrecognized Git contributor".
 2. Set `ADMIN_PASSWORD`.
 3. Deploy. Open `https://<your-site>.netlify.app/admin` on your phone.
 
