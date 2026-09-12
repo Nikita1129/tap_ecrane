@@ -113,3 +113,13 @@ a.btn { text-decoration: none; color: inherit; }
 .login p { color: var(--muted); margin: 0 0 20px; }
 .err { color: var(--ember); font-size: 14px; margin-top: 8px; }
 .empty { color: var(--muted); text-align: center; padding: 40px 10px; }
+
+/* cropper */
+.cropper { margin-top: 8px; }
+.crop-frame { position: relative; width: 100%; aspect-ratio: 1400 / 960; overflow: hidden; background: #000; border-radius: 10px; border: 2px solid var(--amber); touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
+.crop-frame img { position: absolute; top: 0; left: 0; max-width: none; display: block; pointer-events: none; }
+.crop-grid { position: absolute; inset: 0; pointer-events: none;
+  background-image: linear-gradient(rgba(255,255,255,.18) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.18) 1px, transparent 1px);
+  background-size: 33.34% 33.34%; }
+.crop-zoom { display: flex; align-items: center; gap: 10px; margin-top: 10px; color: var(--muted); font-size: 20px; }
+.crop-zoom input[type="range"] { flex: 1; min-height: var(--tap); padding: 0; background: transparent; border: 0; accent-color: var(--amber); }

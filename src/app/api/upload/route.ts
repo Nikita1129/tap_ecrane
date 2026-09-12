@@ -23,11 +23,19 @@ export async function POST(req: NextRequest) {
 
   let file: File | null = null;
   let fit = "cover";
+  let crop: { x: number; y: number; w: number; h: number } | null = null;
   try {
     const form = await req.formData();
     const f = form.get("file");
     if (f instanceof File) file = f;
     if (form.get("fit") === "contain") fit = "contain";
+    const c = form.get("crop");
+    if (typeof c === "string") {
+      const j = JSON.parse(c) as Record<string, unknown>;
+      const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : NaN);
+      const cand = { x: n(j.x), y: n(j.y), w: n(j.w), h: n(j.h) };
+      if (![cand.x, cand.y, cand.w, cand.h].some(Number.isNaN) && cand.w > 0 && cand.h > 0) crop = cand;
+    }
   } catch {
     return NextResponse.json({ error: "Formular invalid" }, { status: 400 });
   }
@@ -40,8 +48,21 @@ export async function POST(req: NextRequest) {
     // "cover": fill 1400x960, crop the overflow (photos).
     // "contain": whole image visible, dark bands where it does not fit (designed posters).
     const contain = fit === "contain";
-    out = await sharp(input, { failOn: "none" })
-      .rotate() // honour EXIF orientation from phone cameras
+    // Apply EXIF orientation first so crop coordinates match what the phone showed.
+    let img = sharp(input, { failOn: "none" }).rotate();
+    if (crop && !contain) {
+      const meta = await sharp(await img.toBuffer()).metadata();
+      const W = meta.width ?? 0;
+      const H = meta.height ?? 0;
+      if (W && H) {
+        const left = Math.min(W - 1, Math.max(0, Math.round(crop.x * W)));
+        const top = Math.min(H - 1, Math.max(0, Math.round(crop.y * H)));
+        const width = Math.max(1, Math.min(W - left, Math.round(crop.w * W)));
+        const height = Math.max(1, Math.min(H - top, Math.round(crop.h * H)));
+        img = sharp(await img.toBuffer()).extract({ left, top, width, height });
+      }
+    }
+    out = await img
       .resize(TV_W, TV_H, contain
         ? { fit: "contain", background: { r: 11, g: 10, b: 9 } }
         : { fit: "cover", position: "centre" })

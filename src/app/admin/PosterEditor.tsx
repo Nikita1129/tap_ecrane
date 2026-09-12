@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import type { Slide } from "@/lib/content";
 import PosterPreview from "./PosterPreview";
+import Cropper, { type CropRect } from "./Cropper";
 
 const DAY_LABELS = ["L", "Ma", "Mi", "J", "V", "S", "D"];
 const MAX_UPLOAD = 15 * 1024 * 1024;
@@ -19,7 +20,7 @@ export default function PosterEditor({
   const set = <K extends keyof Slide>(k: K, v: Slide[K]) => onChange({ ...slide, [k]: v });
   const [pillDraft, setPillDraft] = useState("");
   const [upl, setUpl] = useState<{ busy: boolean; msg: string; err: boolean }>({ busy: false, msg: "", err: false });
-  const [fit, setFit] = useState<"cover" | "contain">("cover");
+  const [pending, setPending] = useState<{ blob: Blob; url: string; w: number; h: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   function addPill() {
@@ -40,18 +41,40 @@ export default function PosterEditor({
     setUpl({ busy: true, msg: "Se pregătește poza…", err: false });
     try {
       const blob = await shrink(f);
-      setUpl({ busy: true, msg: "Se încarcă…", err: false });
+      const dims = await imageSize(blob);
+      if (!dims) {
+        // Browser cannot show it (HEIC on Android): upload as-is, centred crop.
+        await upload(blob, null, "cover");
+        return;
+      }
+      setUpl({ busy: false, msg: "", err: false });
+      setPending({ blob, url: URL.createObjectURL(blob), ...dims });
+    } catch (err) {
+      setUpl({ busy: false, msg: (err as Error).message || "Nu am putut citi poza", err: true });
+    }
+  }
+
+  async function upload(blob: Blob, crop: CropRect | null, fit: "cover" | "contain") {
+    setUpl({ busy: true, msg: "Se încarcă…", err: false });
+    try {
       const fd = new FormData();
       fd.append("file", blob, "upload.jpg");
       fd.append("fit", fit);
+      if (crop) fd.append("crop", JSON.stringify(crop));
       const r = await fetch("/api/upload", { method: "POST", body: fd });
       const j = (await r.json()) as { img?: string; error?: string };
       if (!r.ok || !j.img) throw new Error(j.error || `HTTP ${r.status}`);
       set("img", j.img);
       setUpl({ busy: false, msg: "Imagine încărcată.", err: false });
+      closePending();
     } catch (err) {
       setUpl({ busy: false, msg: (err as Error).message || "Încărcarea a eșuat", err: true });
     }
+  }
+
+  function closePending() {
+    if (pending) URL.revokeObjectURL(pending.url);
+    setPending(null);
   }
 
   return (
@@ -83,28 +106,25 @@ export default function PosterEditor({
 
         {slide.type === "image" && (
           <>
-            <label className="f">Încadrare</label>
-            <div className="seg">
-              <button className={fit === "cover" ? "on" : ""} onClick={() => setFit("cover")}>
-                Umple ecranul
-              </button>
-              <button className={fit === "contain" ? "on" : ""} onClick={() => setFit("contain")}>
-                Imaginea întreagă
-              </button>
-            </div>
-            <div className="hint">
-              {fit === "cover"
-                ? "Pentru poze: umple tot 1400×960, marginile se taie."
-                : "Pentru postere desenate: nimic nu se taie, apar benzi întunecate unde nu încape."}
-            </div>
             <label className="f">Imagine</label>
-            <div className="upload">
+            {pending && (
+              <Cropper
+                src={pending.url}
+                imgW={pending.w}
+                imgH={pending.h}
+                busy={upl.busy}
+                onConfirm={(crop) => upload(pending.blob, crop, "cover")}
+                onWhole={() => upload(pending.blob, null, "contain")}
+                onCancel={closePending}
+              />
+            )}
+            <div className="upload" hidden={!!pending}>
               <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/heic,image/heif,image/*" onChange={onFile} />
               <button className="btn block" onClick={() => fileRef.current?.click()} disabled={upl.busy}>
                 {upl.busy ? upl.msg : slide.img ? "Schimbă poza" : "Alege o poză"}
               </button>
               <div className={"hint" + (upl.err ? " err" : "")} style={{ marginTop: 8 }}>
-                {upl.busy ? "" : upl.msg || "JPG, PNG sau HEIC, max 15 MB. Alege încadrarea înainte de a încărca."}
+                {upl.busy ? "" : upl.msg || "JPG, PNG sau HEIC, max 15 MB. După ce alegi poza, o decupezi pe loc."}
               </div>
             </div>
           </>
@@ -238,6 +258,23 @@ function HoursInput({ value, onChange }: { value: string; onChange: (v: string) 
       </div>
     </div>
   );
+}
+
+/** Natural size of a blob the browser can decode; null if it cannot. */
+function imageSize(blob: Blob): Promise<{ w: number; h: number } | null> {
+  return new Promise((res) => {
+    const url = URL.createObjectURL(blob);
+    const im = new Image();
+    im.onload = () => {
+      URL.revokeObjectURL(url);
+      res({ w: im.naturalWidth, h: im.naturalHeight });
+    };
+    im.onerror = () => {
+      URL.revokeObjectURL(url);
+      res(null);
+    };
+    im.src = url;
+  });
 }
 
 /** Downscale on the phone so the upload stays well under Netlify's 6 MB function limit. */
