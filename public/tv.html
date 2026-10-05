@@ -4,22 +4,26 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Taproom TV</title>
+<link rel="stylesheet" href="/fonts/fonts.css">
 <!--
   Taproom TV player. Static, no framework, no build step.
+  Design: Figma "TapRoom TV UI" (page TV). Canvas 1920x1080, scaled to the screen.
   Layout: 1400x960 poster stage, 520px fixtures column, 120px bottom band.
   The block after the "DATA LOADING" marker is the only part that talks to the
   backend; keep it (and the element ids it uses) if you restyle the page.
 -->
 <style>
   :root{
-    --bg:#0b0a09; --panel:#151311; --line:#2a2622;
-    --ink:#f3ede4; --muted:#a79d90;
-    --amber:#f2a93b; --ember:#e2492e; --accent:var(--amber);
+    --bg:#000; --surface:#171717; --border:#333;
+    --text:#fff; --muted:#b8b8b8; --muted2:rgba(255,255,255,.72); --line:rgba(255,255,255,.16);
+    --accent:#ffd300; --accent-soft:#2e2600; --time:#f8d347;
+    --hot:#ff6363; --hot-deep:#a50e1a; --live:#ea383e;
+    --display:"Big Shoulders","Impact","Arial Narrow",sans-serif;
     --font:"Inter","Segoe UI",Roboto,Arial,sans-serif;
-    --display:"Oswald","Bebas Neue","Impact","Arial Narrow",sans-serif;
+    --mono:"IBM Plex Mono","Courier New",monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{width:100%;height:100%;overflow:hidden;background:#000;color:var(--ink);font-family:var(--font)}
+  html,body{width:100%;height:100%;overflow:hidden;background:#000;color:var(--text);font-family:var(--font)}
   /* Fixed 1920x1080 design, scaled to whatever the screen actually is (JS sets the transform). */
   #app{position:absolute;left:0;top:0;width:1920px;height:1080px;background:var(--bg);transform-origin:0 0;
        display:grid;grid-template-columns:1400px 520px;grid-template-rows:960px 120px}
@@ -27,38 +31,63 @@
   /* ---- poster stage ---- */
   #stage{position:relative;width:1400px;height:960px;background:#000;overflow:hidden}
   #stage img{position:absolute;inset:0;width:1400px;height:960px;object-fit:cover;display:block}
-  .poster{position:absolute;inset:0;padding:96px 110px;display:flex;flex-direction:column;justify-content:center;gap:28px;
-          background:linear-gradient(160deg,#1c1815 0%,#0e0c0a 100%)}
-  .poster.hot{--accent:var(--ember)}
-  .poster .kicker{font-size:34px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);font-weight:600}
-  .poster .title{font-family:var(--display);font-size:128px;line-height:.98;font-weight:700;text-transform:uppercase;letter-spacing:.005em;
-                 overflow-wrap:anywhere}
-  .poster .sub{font-size:44px;line-height:1.25;color:var(--muted);max-width:1100px}
-  .poster .pills{display:flex;flex-wrap:wrap;gap:16px;margin-top:12px}
-  .poster .pill{border:3px solid var(--accent);color:var(--accent);border-radius:999px;padding:10px 26px;font-size:30px;font-weight:600;letter-spacing:.04em}
-  .poster .bar{position:absolute;left:110px;bottom:72px;width:180px;height:10px;background:var(--accent)}
+  .poster{position:absolute;inset:0;padding:96px;display:flex;flex-direction:column;justify-content:center;gap:36px;
+          background:#000 url(/assets/pattern.png) 0 0/1400px 960px no-repeat}
+  .poster.hot::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(165,14,26,.55) 0%,rgba(165,14,26,0) 75%)}
+  .poster.hot::after{content:"";position:absolute;left:0;top:0;width:16px;height:960px;background:var(--hot)}
+  .poster>*{position:relative}
+  .kgroup{display:flex;flex-direction:column;gap:20px}
+  .kgroup .bar{width:96px;height:10px;background:var(--accent)}
+  .poster.hot .kgroup .bar{background:var(--hot)}
+  .kicker{font-family:var(--font);font-weight:700;font-size:44px;line-height:1.1;letter-spacing:2.64px;text-transform:uppercase;color:var(--accent);white-space:nowrap}
+  .poster.hot .kicker{color:var(--hot)}
+  .title{font-family:var(--display);font-weight:900;font-size:136px;line-height:1;color:var(--text);overflow-wrap:anywhere}
+  .sub{font-family:var(--font);font-weight:500;font-size:52px;line-height:1.25;color:var(--muted)}
+  .pills{display:flex;flex-wrap:wrap;gap:16px}
+  .pill{background:var(--accent-soft);border:2px solid var(--accent);border-radius:999px;padding:14px 28px;
+        font-family:var(--font);font-weight:700;font-size:38px;line-height:1;color:var(--accent);white-space:nowrap}
+  .poster.hot .pill{background:var(--hot-deep);border-color:var(--hot-deep);color:var(--text)}
 
   /* ---- fixtures column ---- */
-  #side{background:var(--panel);border-left:2px solid var(--line);padding:44px 40px;display:flex;flex-direction:column}
-  #side h2{font-family:var(--display);font-size:40px;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);margin-bottom:26px}
-  .fx{border-top:2px solid var(--line);padding:22px 0}
-  .fx:last-child{border-bottom:2px solid var(--line)}
-  .fx .when{font-size:24px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
-  .fx .teams{font-size:34px;font-weight:700;line-height:1.15}
-  .fx .comp{font-size:22px;color:var(--muted);margin-top:6px}
-  .fx.live .when{color:var(--ember);font-weight:700}
-  #side .empty{color:var(--muted);font-size:26px}
+  #side{position:relative;background:var(--surface);padding:48px 40px 32px;display:flex;flex-direction:column;overflow:hidden}
+  #side h2{font-family:var(--display);font-weight:900;font-size:52px;line-height:1;color:var(--text)}
+  #side .barwrap{padding:18px 0 20px}
+  #side .barwrap .bar{width:64px;height:8px;background:var(--accent)}
+  #side .fade{position:absolute;left:0;right:0;bottom:0;height:64px;background:linear-gradient(0deg,#171717 0%,rgba(23,23,23,0) 100%);pointer-events:none}
+  .fx{display:flex;flex-direction:column;gap:24px;padding:16px}
+  .fx+.fx{border-top:2px solid var(--line)}
+  .fx .when{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-weight:500;font-size:24px;color:var(--time);line-height:31px}
+  .fx .comp{text-align:center;font-family:var(--font);font-weight:500;font-size:24px;color:var(--muted2)}
+  .fx .teams{display:flex;gap:24px;font-family:var(--display);font-weight:900;font-size:24px;letter-spacing:2.4px;color:var(--text)}
+  .fx .teams span{flex:1;min-width:0}
+  .fx .teams span+span{text-align:right}
+  .fx.hot{background:var(--hot-deep);border-radius:16px;padding:18px 20px 20px;border-top:0;margin-top:2px}
+  .fx.hot+.fx.hot{margin-top:8px}
+  .fx.hot .when{color:var(--text);justify-content:flex-start;gap:24px}
+  .fx.hot .comp{color:var(--muted2)}
+  .badge{display:inline-flex;align-items:center;gap:8px;background:#fff;border-radius:8px;padding:6px 12px;
+         font-family:var(--mono);font-weight:600;font-size:24px;line-height:1;color:#a5211b}
+  .badge i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--live)}
+  #side .empty{font-family:var(--font);font-weight:500;font-size:28px;color:var(--muted2);padding:16px}
 
   /* ---- bottom band ---- */
-  #band{grid-column:1 / span 2;display:grid;grid-template-columns:520px 1fr 260px;align-items:center;padding:0 48px;
-        background:var(--panel);border-top:2px solid var(--line)}
-  #band.alert{background:var(--ember);color:#fff}
-  #brand{font-family:var(--display);font-size:44px;letter-spacing:.08em;text-transform:uppercase}
-  #brand small{display:block;font-family:var(--font);font-size:18px;letter-spacing:.3em;color:var(--muted)}
-  #band.alert #brand small{color:#ffd9d2}
-  #next{font-size:32px;text-align:center}
-  #next b{font-weight:700}
-  #clock{font-family:var(--display);font-size:56px;text-align:right;font-variant-numeric:tabular-nums}
+  #band{grid-column:1 / span 2;position:relative;background:var(--surface);border-top:2px solid var(--border);
+        display:flex;align-items:center;gap:36px;padding:0 56px 0 32px}
+  #brand{position:relative;width:164px;height:80px;flex:none}
+  #brand img{position:absolute;left:0;bottom:0;width:164px;height:164px;display:block}
+  #band .divider{width:2px;height:64px;background:var(--border);flex:none}
+  #next{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;line-height:1;white-space:nowrap;overflow:hidden}
+  #next .lbl{font-family:var(--font);font-weight:700;font-size:24px;letter-spacing:1.92px;text-transform:uppercase;color:var(--accent)}
+  #next .val{font-family:var(--display);font-weight:900;font-size:52px;color:var(--text)}
+  #next .tag{font-family:var(--display);font-weight:900;font-size:52px;color:var(--muted)}
+  #clock{flex:none;width:143px;text-align:center;font-family:var(--display);font-weight:900;font-size:64px;color:var(--text);font-variant-numeric:tabular-nums}
+  /* alert: 15 min before kickoff */
+  #band.alert{background:var(--hot-deep);border-top-color:var(--hot-deep)}
+  #band.alert .divider{background:var(--text)}
+  #band.alert #next{flex-direction:row;align-items:center;gap:24px}
+  #band.alert .cd{background:#fff;border-radius:12px;padding:10px 22px;font-family:var(--display);font-weight:900;font-size:56px;line-height:1;color:var(--hot-deep);white-space:nowrap}
+  #band.alert .team{font-family:var(--display);font-weight:900;font-size:48px;color:var(--text);white-space:nowrap}
+  #band.alert .vs{font-family:var(--display);font-weight:900;font-size:72px;color:var(--time);line-height:1;padding:0 12px}
 
   /* ---- debug ---- */
   #dbg{display:none;position:absolute;left:12px;top:12px;background:rgba(0,0,0,.75);color:#9f9;font:16px/1.4 monospace;padding:10px 14px;white-space:pre;z-index:9}
@@ -72,9 +101,10 @@
 <body>
 <div id="app">
   <div id="stage"></div>
-  <aside id="side"><h2>Următoarele meciuri</h2><div id="fxlist"></div></aside>
+  <aside id="side"><h2>Următoarele meciuri</h2><div class="barwrap"><div class="bar"></div></div><div id="fxlist"></div><div class="fade"></div></aside>
   <footer id="band">
-    <div id="brand">Taproom<small>by Litra &amp; Friends</small></div>
+    <div id="brand"><img src="/assets/logo.png" alt="Taproom by Litra &amp; Friends" width="164" height="164"></div>
+    <div class="divider"></div>
     <div id="next"></div>
     <div id="clock">--:--</div>
   </footer>
@@ -97,6 +127,8 @@
   var POLL_MS = 5*60*1000;
   var CACHE_KEY = 'tv_content_v1';
   var ALERT_BEFORE_MIN = 15;
+  var LIVE_AFTER_MS = 2*3600*1000;
+  var TAGLINE = 'Bere artizanală · BBQ · Fotbal';
   var qs = new URLSearchParams(location.search);
   var PREVIEW = qs.get('preview') === '1';
   var DEBUG = qs.get('debug') === '1';
@@ -160,7 +192,10 @@
       return;
     }
     var p = el('div','poster'+(s.hot?' hot':''));
-    if (s.kicker) p.appendChild(el('div','kicker',s.kicker));
+    var kg = el('div','kgroup');
+    kg.appendChild(el('div','bar'));
+    if (s.kicker) kg.appendChild(el('div','kicker',s.kicker));
+    p.appendChild(kg);
     if (s.title)  p.appendChild(el('div','title',s.title));
     if (s.sub)    p.appendChild(el('div','sub',s.sub));
     if (s.pills && s.pills.length){
@@ -168,7 +203,6 @@
       s.pills.forEach(function(t){ pills.appendChild(el('span','pill',t)); });
       p.appendChild(pills);
     }
-    p.appendChild(el('div','bar'));
     stage.appendChild(p);
   }
   function preload(slides){
@@ -187,31 +221,48 @@
     return new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]);
   }
   var RO_D=['Dum','Lun','Mar','Mie','Joi','Vin','Sâm'];
-  function fmtWhen(d, now){
-    var hm = pad(d.getHours())+':'+pad(d.getMinutes());
-    if (ymd(d)===ymd(now)) return 'Azi '+hm;
+  function hm(d){ return pad(d.getHours())+':'+pad(d.getMinutes()); }
+  function fmtDay(d, now){
+    if (ymd(d)===ymd(now)) return 'Azi';
     var tom = new Date(now); tom.setDate(tom.getDate()+1);
-    if (ymd(d)===ymd(tom)) return 'Mâine '+hm;
-    return RO_D[d.getDay()]+' '+d.getDate()+'.'+pad(d.getMonth()+1)+' '+hm;
+    if (ymd(d)===ymd(tom)) return 'Mâine';
+    return RO_D[d.getDay()]+' '+d.getDate()+'.'+pad(d.getMonth()+1);
   }
+  function fmtWhen(d, now){ return fmtDay(d, now)+' '+hm(d); }
   function upcoming(fixtures, now){
-    var cutoff = now.getTime() - 2*3600*1000; // keep a match visible ~2h after kickoff
+    var cutoff = now.getTime() - LIVE_AFTER_MS; // keep a match visible ~2h after kickoff
     return fixtures.map(function(f){ return {f:f, d:parseKick(f.kick)}; })
       .filter(function(x){ return x.d && x.d.getTime() > cutoff; })
       .sort(function(a,b){ return a.d-b.d; });
   }
+  function fxState(x, now){
+    var diffMin = (x.d.getTime()-now.getTime())/60000;
+    if (diffMin <= 0) return 'live';
+    if (diffMin <= ALERT_BEFORE_MIN) return 'soon';
+    return 'later';
+  }
   function renderFixtures(){
     var now = new Date();
-    var list = upcoming(state.content.fixtures||[], now).slice(0,5);
+    var list = upcoming(state.content.fixtures||[], now).slice(0,4); // 4 cards fit the 960px column
     var box = document.getElementById('fxlist');
     while (box.firstChild) box.removeChild(box.firstChild);
     if (!list.length){ box.appendChild(el('div','empty','Niciun meci programat')); }
     list.forEach(function(x){
-      var live = x.d.getTime() <= now.getTime();
-      var row = el('div','fx'+(live?' live':''));
-      row.appendChild(el('div','when', live ? 'LIVE · '+fmtWhen(x.d,now) : fmtWhen(x.d,now)));
-      row.appendChild(el('div','teams', x.f.home+' – '+x.f.away));
+      var st = fxState(x, now);
+      var row = el('div','fx'+(st!=='later'?' hot':''));
+      var when = el('div','when');
+      if (st==='live'){
+        var b = el('span','badge'); b.appendChild(el('i')); b.appendChild(document.createTextNode('LIVE'));
+        when.appendChild(b); when.appendChild(el('span',null,'De la '+hm(x.d)));
+      } else if (st==='soon'){
+        when.appendChild(el('span',null,'ÎNCEPE ÎN '+Math.max(1,Math.ceil((x.d.getTime()-now.getTime())/60000))+' MIN'));
+      } else {
+        when.appendChild(el('span',null,fmtDay(x.d,now))); when.appendChild(el('span',null,hm(x.d)));
+      }
+      row.appendChild(when);
       if (x.f.comp) row.appendChild(el('div','comp', x.f.comp));
+      var teams = el('div','teams'); teams.appendChild(el('span',null,x.f.home)); teams.appendChild(el('span',null,x.f.away));
+      row.appendChild(teams);
       box.appendChild(row);
     });
     // bottom band
@@ -219,18 +270,26 @@
     var nextEl = document.getElementById('next'), band=document.getElementById('band');
     while (nextEl.firstChild) nextEl.removeChild(nextEl.firstChild);
     var alert = false;
-    if (nxt){
+    if (!nxt){
+      nextEl.appendChild(el('div','tag',TAGLINE));
+    } else {
       var diffMin = (nxt.d.getTime()-now.getTime())/60000;
-      alert = diffMin <= ALERT_BEFORE_MIN && diffMin > -1;
-      nextEl.appendChild(el('span',null, alert ? 'ÎNCEPE ÎN '+Math.max(1,Math.ceil(diffMin))+' MIN · ' : 'Următorul meci: '));
-      nextEl.appendChild(el('b',null, nxt.f.home+' – '+nxt.f.away));
-      nextEl.appendChild(el('span',null,' · '+fmtWhen(nxt.d,now)));
+      alert = diffMin <= ALERT_BEFORE_MIN && diffMin > 0;
+      if (alert){
+        nextEl.appendChild(el('span','cd','ÎNCEPE ÎN '+Math.max(1,Math.ceil(diffMin))+' MIN'));
+        nextEl.appendChild(el('span','team',nxt.f.home));
+        nextEl.appendChild(el('span','vs','VS'));
+        nextEl.appendChild(el('span','team',nxt.f.away));
+      } else {
+        nextEl.appendChild(el('div','lbl', nxt.d.getTime() <= now.getTime() ? 'Acum' : 'Următorul meci'));
+        nextEl.appendChild(el('div','val', nxt.f.home+' – '+nxt.f.away+' · '+fmtWhen(nxt.d,now)));
+      }
     }
     band.classList.toggle('alert', alert);
   }
   function tickClock(){
     var d=new Date();
-    document.getElementById('clock').textContent = pad(d.getHours())+':'+pad(d.getMinutes());
+    document.getElementById('clock').textContent = hm(d);
   }
 
   /* ---------- rotation ---------- */
