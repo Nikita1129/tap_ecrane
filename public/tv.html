@@ -389,10 +389,29 @@
   }
 
   /* ---------- scale the 1920x1080 design to the real screen ---------- */
+  // Extra shrink for TVs that overscan (crop the edges). Set per screen with the
+  // keyboard ( - / + / 0 ), remembered in localStorage, or force with ?zoom=0.95
+  var SCALE_KEY = 'tv_scale';
+  var userScale = 1;
+  (function(){
+    var q = parseFloat(qs.get('zoom'));
+    if (q >= 0.8 && q <= 1) { userScale = q; return; }
+    try { var v = parseFloat(localStorage.getItem(SCALE_KEY)); if (v >= 0.8 && v <= 1) userScale = v; } catch(e){}
+  })();
+  var scaleTip = null, scaleTipTimer = null;
+  function setUserScale(v){
+    userScale = Math.round(Math.min(1, Math.max(0.8, v))*100)/100;
+    try { localStorage.setItem(SCALE_KEY, String(userScale)); } catch(e){}
+    fit();
+    if (!scaleTip){ scaleTip = el('div', null); scaleTip.style.cssText='position:fixed;left:50%;top:40px;transform:translateX(-50%);background:#ffd300;color:#000;font:700 28px/1 Inter,Arial,sans-serif;padding:14px 24px;border-radius:12px;z-index:20'; document.body.appendChild(scaleTip); }
+    scaleTip.textContent = 'Mărime ' + Math.round(userScale*100) + '%  ( −  /  +  /  0 )';
+    scaleTip.style.display = 'block';
+    clearTimeout(scaleTipTimer); scaleTipTimer = setTimeout(function(){ scaleTip.style.display='none'; }, 2500);
+  }
   function fit(){
     if (PREVIEW) return;
     var app = document.getElementById('app');
-    var s = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+    var s = Math.min(window.innerWidth/1920, window.innerHeight/1080) * userScale;
     app.style.transform = 'scale('+s+')';
     app.style.left = Math.round((window.innerWidth - 1920*s)/2)+'px';
     app.style.top  = Math.round((window.innerHeight - 1080*s)/2)+'px';
@@ -404,6 +423,9 @@
     if (e.key==='ArrowRight'){ show(1); e.preventDefault(); }
     else if (e.key==='ArrowLeft'){ show(-1); e.preventDefault(); }
     else if (e.key==='Enter'){ state.paused=!state.paused; show(0); e.preventDefault(); }
+    else if (e.key==='-' || e.key==='_' || e.code==='NumpadSubtract'){ setUserScale(userScale-0.01); e.preventDefault(); }
+    else if (e.key==='+' || e.key==='=' || e.code==='NumpadAdd'){ setUserScale(userScale+0.01); e.preventDefault(); }
+    else if (e.key==='0' || e.code==='Numpad0'){ setUserScale(1); e.preventDefault(); }
   });
 
   /* ---------- boot ---------- */

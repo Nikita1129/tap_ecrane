@@ -56,6 +56,10 @@ or in the browser on the Android box, full screen. Same URL on every screen.
 
 - `/tv?debug=1` shows an overlay with data source, last fetch, errors and the current slide.
 - Remote / keyboard: `→` next poster, `←` previous, `Enter` pause / resume.
+- Picture too big or cut at the edges (TV overscan): first set the TV's picture
+  size to "Fit to screen". Otherwise press `-` / `+` on the player to shrink or
+  grow it by 1% (80–100%), `0` to reset. The value is remembered on that screen.
+  `/tv?zoom=0.95` forces a size from the URL.
 
 ## How the player stays up
 
