@@ -86,6 +86,14 @@
   #brand{position:relative;width:164px;height:80px;flex:none}
   #brand img{position:absolute;left:0;bottom:0;width:164px;height:164px;display:block}
   #band .divider{width:2px;height:64px;background:var(--border);flex:none}
+  #brand{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  /* hidden exit: hold the logo 4 s (touch screens without a keyboard) */
+  #exitbox{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;cursor:default}
+  #exitbox .card{background:#171717;border:2px solid #333;border-radius:20px;padding:40px 48px;text-align:center;max-width:720px;font-family:var(--font)}
+  #exitbox h3{font-family:var(--display);font-weight:900;font-size:56px;margin-bottom:12px}
+  #exitbox p{font-size:26px;color:var(--muted);margin-bottom:28px;line-height:1.35}
+  #exitbox button{font:700 34px/1 var(--font);border:0;border-radius:14px;padding:26px 44px;margin:0 10px;cursor:pointer}
+  #exitbox .yes{background:#ffd300;color:#000} #exitbox .no{background:#333;color:#fff}
   #next{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;line-height:1;white-space:nowrap;overflow:hidden}
   #next .lbl{font-family:var(--font);font-weight:700;font-size:24px;letter-spacing:1.92px;text-transform:uppercase;color:var(--accent)}
   #next .val{font-family:var(--display);font-weight:900;font-size:52px;color:var(--text)}
@@ -417,6 +425,33 @@
     app.style.top  = Math.round((window.innerHeight - 1080*s)/2)+'px';
   }
   fit(); window.addEventListener('resize', fit);
+
+  /* ---------- hidden exit for touch screens: hold the logo 4 seconds ---------- */
+  (function(){
+    var brand = document.getElementById('brand'), t = null;
+    function cancel(){ if (t){ clearTimeout(t); t = null; } }
+    function ask(){
+      cancel();
+      if (document.getElementById('exitbox')) return;
+      var box = el('div'); box.id = 'exitbox';
+      var card = el('div','card');
+      card.appendChild(el('h3',null,'Închizi ecranul TV?'));
+      var msg = el('p',null,'Playerul se închide și apare Windows. Ca să-l pornești din nou, apasă de două ori pe TaproomTV de pe desktop.');
+      card.appendChild(msg);
+      var yes = el('button','yes','Închide'), no = el('button','no','Anulează');
+      yes.onclick = function(){
+        window.close();
+        // If Chrome refuses to close (opened another way), say how instead.
+        setTimeout(function(){ msg.textContent = 'Chrome nu permite închiderea de aici. Conectează o tastatură și apasă Alt+F4, sau intră prin AnyDesk.'; yes.style.display='none'; no.textContent='OK'; }, 400);
+      };
+      no.onclick = function(){ box.parentNode.removeChild(box); };
+      card.appendChild(yes); card.appendChild(no);
+      box.appendChild(card); document.body.appendChild(box);
+    }
+    brand.addEventListener('pointerdown', function(e){ cancel(); t = setTimeout(ask, 4000); e.preventDefault(); });
+    ['pointerup','pointercancel','pointerleave'].forEach(function(ev){ brand.addEventListener(ev, cancel); });
+    brand.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  })();
 
   /* ---------- keys ---------- */
   document.addEventListener('keydown', function(e){

@@ -60,6 +60,8 @@ or in the browser on the Android box, full screen. Same URL on every screen.
   size to "Fit to screen". Otherwise press `-` / `+` on the player to shrink or
   grow it by 1% (80–100%), `0` to reset. The value is remembered on that screen.
   `/tv?zoom=0.95` forces a size from the URL.
+- Touch screen, no keyboard: hold the Taproom logo (bottom left) for 4 seconds
+  to get a "close the player" dialog.
 
 ## How the player stays up
 
