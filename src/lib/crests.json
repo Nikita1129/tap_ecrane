@@ -1,9 +1,22 @@
 {
+ "arsenal": "arsenal.svg",
+ "atletico-madrid": "atletico-madrid.svg",
+ "barcelona": "barcelona.svg",
  "bayern-munchen": "bayern-munchen.svg",
+ "borussia-dortmund": "borussia-dortmund.svg",
  "chelsea": "chelsea.svg",
+ "porto": "fc-porto.svg",
+ "feyenoord": "feyenoord.svg",
  "formula-1": "formula-1.png",
  "galatasaray": "galatasaray.svg",
+ "inter": "inter.svg",
+ "juventus": "juventus.svg",
+ "manchester-city": "manchester-city.svg",
+ "napoli": "napoli.svg",
  "newcastle": "newcastle.svg",
  "paris-saint-germain": "paris-saint-germain.svg",
- "tottenham": "tottenham.svg"
+ "roma": "roma.svg",
+ "tottenham": "tottenham.svg",
+ "uefa-champions-league": "uefa-champions-league.svg",
+ "villarreal": "villarreal.svg"
 }
