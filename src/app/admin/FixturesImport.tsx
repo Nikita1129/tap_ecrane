@@ -54,7 +54,8 @@ export default function FixturesImport({ existing, onAdd }: { existing: Fixture[
       />
       <div className="hint">
         Format: <code>zi.lună oră Gazde - Oaspeți | Competiție</code>. Merge și lipit direct din Excel sau Google Sheets
-        (coloane: dată, oră, gazde, oaspeți, competiție). Fără an = cea mai apropiată dată.
+        (coloane: dată, oră, gazde, oaspeți, competiție). Fără an = cea mai apropiată dată. O linie fără
+        „ - ” e un eveniment singur (ex. <code>11.10 15:00 Singapore GP | Formula 1</code>).
       </div>
       <div className="row-actions">
         <input ref={fileRef} type="file" accept=".txt,.csv,text/plain,text/csv" onChange={onFile} style={{ display: "none" }} />
@@ -77,9 +78,7 @@ export default function FixturesImport({ existing, onAdd }: { existing: Fixture[
               p.ok ? (
                 <div key={p.line} className="imp-row" style={{ opacity: p.duplicate ? 0.45 : 1 }}>
                   <span className="imp-when">{fmt(p.fixture.kick)}</span>
-                  <span className="imp-teams">
-                    {p.fixture.home} – {p.fixture.away}
-                  </span>
+                  <span className="imp-teams">{p.fixture.away ? `${p.fixture.home} – ${p.fixture.away}` : p.fixture.home}</span>
                   <span className="imp-comp">{p.duplicate ? "există deja" : p.fixture.comp}</span>
                 </div>
               ) : (

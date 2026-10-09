@@ -10,6 +10,7 @@ export function crestFor(name: string): string | null {
   const s = slugify(name);
   if (!s) return null;
   const candidates = [s, alias[s]].filter(Boolean) as string[];
+  if (/(^|-)gp$|grand-prix|formula-1|^f1$/.test(s)) candidates.push("formula-1");
   for (const c of candidates) {
     if (files[c]) return `/crests/${files[c]}`;
   }

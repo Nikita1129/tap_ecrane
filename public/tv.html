@@ -63,6 +63,10 @@
   .crest.none{border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;
               font-family:var(--display);font-weight:900;font-size:34px;letter-spacing:1px;color:var(--muted2)}
   .fx.hot .crest.none{background:rgba(255,255,255,.14);color:var(--text)}
+  .fx.single .mid{justify-content:flex-start;gap:20px}
+  .fx.single .evt{flex:1;min-width:0}
+  .fx.single .evt-name{font-family:var(--display);font-weight:900;font-size:32px;letter-spacing:1.5px;color:var(--text);line-height:1.05}
+  .fx.single .evt .comp{text-align:left;margin-top:4px}
   .fx .teams{display:flex;gap:24px;font-family:var(--display);font-weight:900;font-size:24px;letter-spacing:2.4px;color:var(--text)}
   .fx .teams span{flex:1;min-width:0}
   .fx .teams span+span{text-align:right}
@@ -280,13 +284,23 @@
         when.appendChild(el('span',null,fmtDay(x.d,now))); when.appendChild(el('span',null,hm(x.d)));
       }
       row.appendChild(when);
-      var mid = el('div','mid');
-      mid.appendChild(crestEl(x.f.homeCrest, x.f.home));
-      mid.appendChild(el('div','comp', x.f.comp||''));
-      mid.appendChild(crestEl(x.f.awayCrest, x.f.away));
-      row.appendChild(mid);
-      var teams = el('div','teams'); teams.appendChild(el('span',null,x.f.home)); teams.appendChild(el('span',null,x.f.away));
-      row.appendChild(teams);
+      if (!x.f.away){
+        // single event (F1, box, UFC): one crest + name, centred
+        row.className += ' single';
+        var mid1 = el('div','mid');
+        mid1.appendChild(crestEl(x.f.homeCrest, x.f.home));
+        var txt = el('div','evt'); txt.appendChild(el('div','evt-name', x.f.home)); if (x.f.comp) txt.appendChild(el('div','comp', x.f.comp));
+        mid1.appendChild(txt);
+        row.appendChild(mid1);
+      } else {
+        var mid = el('div','mid');
+        mid.appendChild(crestEl(x.f.homeCrest, x.f.home));
+        mid.appendChild(el('div','comp', x.f.comp||''));
+        mid.appendChild(crestEl(x.f.awayCrest, x.f.away));
+        row.appendChild(mid);
+        var teams = el('div','teams'); teams.appendChild(el('span',null,x.f.home)); teams.appendChild(el('span',null,x.f.away));
+        row.appendChild(teams);
+      }
       box.appendChild(row);
     });
     // bottom band
@@ -302,13 +316,16 @@
       if (alert){
         nextEl.appendChild(el('span','cd','ÎNCEPE ÎN '+Math.max(1,Math.ceil(diffMin))+' MIN'));
         var th = el('span','team'); th.appendChild(crestEl(nxt.f.homeCrest, nxt.f.home)); th.appendChild(el('span',null,nxt.f.home));
-        var ta = el('span','team'); ta.appendChild(el('span',null,nxt.f.away)); ta.appendChild(crestEl(nxt.f.awayCrest, nxt.f.away));
         nextEl.appendChild(th);
-        nextEl.appendChild(el('span','vs','VS'));
-        nextEl.appendChild(ta);
+        if (nxt.f.away){
+          var ta = el('span','team'); ta.appendChild(el('span',null,nxt.f.away)); ta.appendChild(crestEl(nxt.f.awayCrest, nxt.f.away));
+          nextEl.appendChild(el('span','vs','VS'));
+          nextEl.appendChild(ta);
+        }
       } else {
-        nextEl.appendChild(el('div','lbl', nxt.d.getTime() <= now.getTime() ? 'Acum' : 'Următorul meci'));
-        nextEl.appendChild(el('div','val', nxt.f.home+' – '+nxt.f.away+' · '+fmtWhen(nxt.d,now)));
+        var isMatch = !!nxt.f.away;
+        nextEl.appendChild(el('div','lbl', nxt.d.getTime() <= now.getTime() ? 'Acum' : (isMatch ? 'Următorul meci' : 'Urmează')));
+        nextEl.appendChild(el('div','val', (isMatch ? nxt.f.home+' – '+nxt.f.away : nxt.f.home)+' · '+fmtWhen(nxt.d,now)));
       }
     }
     band.classList.toggle('alert', alert);

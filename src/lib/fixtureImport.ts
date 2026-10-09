@@ -7,6 +7,7 @@ import { newId, type Fixture } from "./content";
 //   2026-10-20 21:00 Arsenal – Liverpool | Premier League
 //   20.10<TAB>21:00<TAB>Arsenal<TAB>Liverpool<TAB>Premier League      (pasted from Excel / Sheets)
 //   20.10;21:00;Arsenal;Liverpool;Premier League                       (CSV with ; or ,)
+//   11.10 15:00 Singapore GP | Formula 1                                 (single event, no " - ")
 //
 // A date without a year means the next occurrence of that day (today or later).
 // Lines starting with # and empty lines are ignored.
@@ -80,11 +81,11 @@ export function parseFixtureLine(raw: string, lineNo: number, now: Date, existin
 
   const cols = splitColumns(line);
   if (cols) {
-    if (cols.length < 4) return fail("Trebuie minimum 4 coloane: dată, oră, gazde, oaspeți");
+    if (cols.length < 3) return fail("Trebuie minimum 3 coloane: dată, oră, gazde (oaspeți, competiție)");
     date = parseDateToken(cols[0], now);
     time = parseTimeToken(cols[1]);
     home = cols[2];
-    away = cols[3];
+    away = cols[3] || "";
     comp = cols[4] || "";
   } else {
     const parts = line.split(/\s+/);
@@ -94,14 +95,14 @@ export function parseFixtureLine(raw: string, lineNo: number, now: Date, existin
     const [teams, ...compParts] = rest.split("|");
     comp = compParts.join("|").trim();
     const t = teams.split(SEP);
-    if (t.length !== 2) return fail("Nu găsesc echipele. Scrie „Gazde - Oaspeți”");
+    if (t.length > 2) return fail("Prea multe separatoare pe linie");
     home = t[0].trim();
-    away = t[1].trim();
+    away = t.length === 2 ? t[1].trim() : ""; // no separator = single event (F1 GP, box, UFC)
   }
 
   if (!date) return fail("Data lipsește sau e greșită (ex. 20.10 sau 20.10.2026)");
   if (!time) return fail("Ora lipsește sau e greșită (ex. 21:00)");
-  if (!home || !away) return fail("Lipsește o echipă");
+  if (!home) return fail("Lipsește numele echipei sau al evenimentului");
 
   const kick = toKick(date, time[0], time[1]);
   const key = (f: { home: string; away: string; kick: string }) => `${f.home.toLowerCase()}|${f.away.toLowerCase()}|${f.kick}`;

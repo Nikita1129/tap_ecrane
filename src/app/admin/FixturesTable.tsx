@@ -49,7 +49,7 @@ export default function FixturesTable({ fixtures, onChange }: { fixtures: Fixtur
               <span className="vs">vs</span>
               <div className="teamin">
                 <Crest name={f.away} />
-                <input value={f.away} placeholder="Oaspeți" onChange={(e) => upd(f.id, { away: e.target.value })} />
+                <input value={f.away} placeholder="Oaspeți (gol = eveniment)" onChange={(e) => upd(f.id, { away: e.target.value })} />
               </div>
             </div>
             <div className="meta">
