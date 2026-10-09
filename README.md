@@ -99,6 +99,21 @@ or in the browser on the Android box, full screen. Same URL on every screen.
 - Saving replaces the whole document. There is one editor; no merging.
 - Deleting a poster never deletes its image blob.
 
+## Importing fixtures in bulk
+
+Admin → Meciuri → "Import în bloc". Paste one match per line:
+
+```
+20.10 21:00 Real Madrid - Barcelona | La Liga
+21.10.2026 19:30 Arsenal vs Liverpool | Premier League
+```
+
+Date `DD.MM` or `DD.MM.YYYY` or `YYYY-MM-DD`; time `HH:MM`; teams separated by
+`-`, `–` or `vs`; competition after `|`, optional. Rows pasted from Excel or
+Google Sheets (date, time, home, away, competition) and `;`-separated CSV work
+too. A date without a year means the next occurrence. Lines that already exist
+are skipped; lines with errors are shown and not imported.
+
 ## Uploads
 
 JPG / PNG / HEIC up to 15 MB. The phone downscales the photo before sending

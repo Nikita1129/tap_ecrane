@@ -1,6 +1,7 @@
 "use client";
 import type { Fixture } from "@/lib/content";
 import { blankFixture, sortFixtures } from "@/lib/content";
+import FixturesImport from "./FixturesImport";
 
 function isOld(f: Fixture, now = Date.now()): boolean {
   const t = new Date(f.kick).getTime();
@@ -17,6 +18,7 @@ export default function FixturesTable({ fixtures, onChange }: { fixtures: Fixtur
         <button className="btn primary" onClick={() => onChange(sortFixtures([...fixtures, blankFixture()]))}>
           + Meci
         </button>
+        <FixturesImport existing={fixtures} onAdd={(added) => onChange(sortFixtures([...fixtures, ...added]))} />
         {old > 0 && (
           <button className="btn danger" onClick={() => onChange(fixtures.filter((f) => !isOld(f)))}>
             Șterge meciurile vechi ({old})
