@@ -114,6 +114,22 @@ Google Sheets (date, time, home, away, competition) and `;`-separated CSV work
 too. A date without a year means the next occurrence. Lines that already exist
 are skipped; lines with errors are shown and not imported.
 
+## Team crests
+
+Put crest files in `public/crests/` named after the team, e.g.
+`Real Madrid.png`, `Manchester City.png`, `Sheriff Tiraspol.png` (PNG with
+transparency, SVG or WebP; ~256 px is plenty). Then run:
+
+```bash
+node scripts/crests.mjs
+```
+
+This rebuilds `src/lib/crests.json`, the name → file map. Matching ignores
+case, diacritics and club suffixes (FC, CF, AC…); `src/lib/crest-aliases.json`
+maps short names to the file ("Man City" → Manchester City). A team without a
+crest shows a dark circle with its initials on the TV and a "?" in the admin
+next to the name, so you can see what is missing before match day.
+
 ## Uploads
 
 JPG / PNG / HEIC up to 15 MB. The phone downscales the photo before sending

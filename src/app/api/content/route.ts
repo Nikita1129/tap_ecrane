@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requestIsAuthed } from "@/lib/auth";
 import { readContent, writeContent } from "@/lib/blobs";
 import { contentSchema } from "@/lib/content";
+import { crestFor } from "@/lib/crests";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,7 +10,9 @@ export const dynamic = "force-dynamic";
 // Public. Polled by every TV every 5 minutes.
 export async function GET() {
   const content = await readContent();
-  return NextResponse.json(content, {
+  // Crest URLs are derived from team names at read time, never stored.
+  const fixtures = content.fixtures.map((f) => ({ ...f, homeCrest: crestFor(f.home), awayCrest: crestFor(f.away) }));
+  return NextResponse.json({ ...content, fixtures }, {
     headers: {
       "Cache-Control": "no-store",
       "Access-Control-Allow-Origin": "*",

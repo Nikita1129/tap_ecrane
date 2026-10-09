@@ -57,7 +57,12 @@
   .fx{display:flex;flex-direction:column;gap:24px;padding:16px}
   .fx+.fx{border-top:2px solid var(--line)}
   .fx .when{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-weight:500;font-size:24px;color:var(--time);line-height:31px}
-  .fx .comp{text-align:center;font-family:var(--font);font-weight:500;font-size:24px;color:var(--muted2)}
+  .fx .mid{display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .fx .comp{flex:1;text-align:center;font-family:var(--font);font-weight:500;font-size:24px;color:var(--muted2)}
+  .crest{width:96px;height:96px;flex:none;object-fit:contain;display:block}
+  .crest.none{border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;
+              font-family:var(--display);font-weight:900;font-size:34px;letter-spacing:1px;color:var(--muted2)}
+  .fx.hot .crest.none{background:rgba(255,255,255,.14);color:var(--text)}
   .fx .teams{display:flex;gap:24px;font-family:var(--display);font-weight:900;font-size:24px;letter-spacing:2.4px;color:var(--text)}
   .fx .teams span{flex:1;min-width:0}
   .fx .teams span+span{text-align:right}
@@ -86,7 +91,9 @@
   #band.alert .divider{background:var(--text)}
   #band.alert #next{flex-direction:row;align-items:center;gap:24px}
   #band.alert .cd{background:#fff;border-radius:12px;padding:10px 22px;font-family:var(--display);font-weight:900;font-size:56px;line-height:1;color:var(--hot-deep);white-space:nowrap}
-  #band.alert .team{font-family:var(--display);font-weight:900;font-size:48px;color:var(--text);white-space:nowrap}
+  #band.alert .team{display:flex;align-items:center;gap:16px;font-family:var(--display);font-weight:900;font-size:48px;color:var(--text);white-space:nowrap}
+  #band.alert .team .crest{width:64px;height:64px}
+  #band.alert .team .crest.none{font-size:22px}
   #band.alert .vs{font-family:var(--display);font-weight:900;font-size:72px;color:var(--time);line-height:1;padding:0 12px}
 
   /* ---- debug ---- */
@@ -183,6 +190,14 @@
   /* ---------- rendering ---------- */
   var stage = document.getElementById('stage');
   function el(tag, cls, text){ var e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; }
+  // Team crest: <img> when the API found one, otherwise a circle with the first letters.
+  function crestEl(url, name){
+    if (url){ var im = el('img','crest'); im.src = url; im.alt=''; im.onerror=function(){ var n=crestEl(null,name); im.parentNode && im.parentNode.replaceChild(n, im); }; return im; }
+    var words = (name||'').replace(/[^A-Za-zĂÂÎȘȚăâîșț0-9 ]/g,'').trim().split(/\s+/).filter(Boolean);
+    var t = words.length>1 ? words.map(function(w){ return w.charAt(0); }).join('').slice(0,3) : (words[0]||'').slice(0,3);
+    t = t.toUpperCase();
+    return el('div','crest none', t || '?');
+  }
   function renderSlide(s){
     while (stage.firstChild) stage.removeChild(stage.firstChild);
     if (s.type==='image'){
@@ -210,7 +225,12 @@
       if (s.type!=='image' || !s.img || images[s.img]) return;
       var im = new Image();
       im.onload = function(){ delete broken[s.img]; };
-      im.onerror = function(){ broken[s.img]=true; };
+      im.onerror = function(){
+        broken[s.img]=true;
+        // If this image is on screen right now, do not leave a black stage: move on.
+        var cur = state.cycle[state.idx];
+        if (cur && cur.type==='image' && cur.img===s.img && !PREVIEW) show(1);
+      };
       im.src = s.img;
       images[s.img] = im;
     });
@@ -243,7 +263,7 @@
   }
   function renderFixtures(){
     var now = new Date();
-    var list = upcoming(state.content.fixtures||[], now).slice(0,4); // 4 cards fit the 960px column
+    var list = upcoming(state.content.fixtures||[], now).slice(0,3); // 3 cards with crests fit the 960px column
     var box = document.getElementById('fxlist');
     while (box.firstChild) box.removeChild(box.firstChild);
     if (!list.length){ box.appendChild(el('div','empty','Niciun meci programat')); }
@@ -260,7 +280,11 @@
         when.appendChild(el('span',null,fmtDay(x.d,now))); when.appendChild(el('span',null,hm(x.d)));
       }
       row.appendChild(when);
-      if (x.f.comp) row.appendChild(el('div','comp', x.f.comp));
+      var mid = el('div','mid');
+      mid.appendChild(crestEl(x.f.homeCrest, x.f.home));
+      mid.appendChild(el('div','comp', x.f.comp||''));
+      mid.appendChild(crestEl(x.f.awayCrest, x.f.away));
+      row.appendChild(mid);
       var teams = el('div','teams'); teams.appendChild(el('span',null,x.f.home)); teams.appendChild(el('span',null,x.f.away));
       row.appendChild(teams);
       box.appendChild(row);
@@ -277,9 +301,11 @@
       alert = diffMin <= ALERT_BEFORE_MIN && diffMin > 0;
       if (alert){
         nextEl.appendChild(el('span','cd','ÎNCEPE ÎN '+Math.max(1,Math.ceil(diffMin))+' MIN'));
-        nextEl.appendChild(el('span','team',nxt.f.home));
+        var th = el('span','team'); th.appendChild(crestEl(nxt.f.homeCrest, nxt.f.home)); th.appendChild(el('span',null,nxt.f.home));
+        var ta = el('span','team'); ta.appendChild(el('span',null,nxt.f.away)); ta.appendChild(crestEl(nxt.f.awayCrest, nxt.f.away));
+        nextEl.appendChild(th);
         nextEl.appendChild(el('span','vs','VS'));
-        nextEl.appendChild(el('span','team',nxt.f.away));
+        nextEl.appendChild(ta);
       } else {
         nextEl.appendChild(el('div','lbl', nxt.d.getTime() <= now.getTime() ? 'Acum' : 'Următorul meci'));
         nextEl.appendChild(el('div','val', nxt.f.home+' – '+nxt.f.away+' · '+fmtWhen(nxt.d,now)));

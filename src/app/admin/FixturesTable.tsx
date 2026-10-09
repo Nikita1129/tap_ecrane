@@ -2,6 +2,18 @@
 import type { Fixture } from "@/lib/content";
 import { blankFixture, sortFixtures } from "@/lib/content";
 import FixturesImport from "./FixturesImport";
+import { crestFor } from "@/lib/crests";
+
+function Crest({ name }: { name: string }) {
+  const url = name.trim() ? crestFor(name) : null;
+  if (!name.trim()) return null;
+  return url ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img className="crest" src={url} alt="" title="Emblemă găsită" />
+  ) : (
+    <span className="crest none" title="Nu există emblemă pentru acest nume">?</span>
+  );
+}
 
 function isOld(f: Fixture, now = Date.now()): boolean {
   const t = new Date(f.kick).getTime();
@@ -30,9 +42,15 @@ export default function FixturesTable({ fixtures, onChange }: { fixtures: Fixtur
         {fixtures.map((f) => (
           <div className={"fxcard" + (isOld(f) ? " past" : "")} key={f.id}>
             <div className="teams">
-              <input value={f.home} placeholder="Gazde" onChange={(e) => upd(f.id, { home: e.target.value })} />
+              <div className="teamin">
+                <Crest name={f.home} />
+                <input value={f.home} placeholder="Gazde" onChange={(e) => upd(f.id, { home: e.target.value })} />
+              </div>
               <span className="vs">vs</span>
-              <input value={f.away} placeholder="Oaspeți" onChange={(e) => upd(f.id, { away: e.target.value })} />
+              <div className="teamin">
+                <Crest name={f.away} />
+                <input value={f.away} placeholder="Oaspeți" onChange={(e) => upd(f.id, { away: e.target.value })} />
+              </div>
             </div>
             <div className="meta">
               <input value={f.comp} placeholder="Competiție (ex. Champions League)" onChange={(e) => upd(f.id, { comp: e.target.value })} />

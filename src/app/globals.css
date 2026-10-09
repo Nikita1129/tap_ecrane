@@ -131,3 +131,9 @@ a.btn { text-decoration: none; color: inherit; }
 .imp-row .imp-comp { grid-column: 2; color: var(--muted); font-size: 13px; }
 .imp-row.err { background: #2b1a17; }
 .imp-row.err .imp-comp { color: var(--ember); }
+
+/* crests in the fixtures table */
+.teamin { position: relative; min-width: 0; }
+.teamin input { padding-left: 40px; }
+.teamin .crest { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; object-fit: contain; }
+.teamin .crest.none { display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--line); color: var(--muted); font-size: 12px; font-weight: 700; }
