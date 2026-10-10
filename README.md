@@ -120,6 +120,15 @@ Google Sheets (date, time, home, away, competition) and `;`-separated CSV work
 too. A date without a year means the next occurrence. Lines that already exist
 are skipped; lines with errors are shown and not imported.
 
+## Poster images for designers
+
+Canvas **1400 × 960 px** (ratio 35:24), JPG or PNG, sRGB, up to 15 MB. Keep
+text 60 px from the top and left edges and 40 px from the right and bottom.
+The Taproom logo covers the bottom-left corner (x 32–196, y 897–960), so no
+text there. Template with the zones marked: `docs/sablon-afis-1400x960.png`.
+A 16:9 (1920 × 1080) design loses ~150 px on each side; a portrait Instagram
+post loses most of its height, so design for 1400 × 960.
+
 ## Team crests
 
 Put crest files in `public/crests/` named after the team, e.g.
