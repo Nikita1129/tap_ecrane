@@ -6,8 +6,9 @@ import { blankSlide, sortFixtures } from "@/lib/content";
 import PosterList from "./PosterList";
 import PosterEditor from "./PosterEditor";
 import FixturesTable from "./FixturesTable";
+import ReportView from "./ReportView";
 
-type Tab = "postere" | "meciuri";
+type Tab = "postere" | "meciuri" | "raport";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -17,7 +18,10 @@ export default function Dashboard() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [saveMsg, setSaveMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [saveMsg, setSaveMsg] = useState<{
+    kind: "ok" | "err";
+    text: string;
+  } | null>(null);
 
   useEffect(() => {
     fetch("/api/content", { cache: "no-store" })
@@ -63,9 +67,15 @@ export default function Dashboard() {
       }
       setContent({ ...j, fixtures: sortFixtures(j.fixtures) });
       setDirty(false);
-      setSaveMsg({ kind: "ok", text: "Salvat. TV-urile preiau în max. 5 min." });
+      setSaveMsg({
+        kind: "ok",
+        text: "Salvat. TV-urile preiau în max. 5 min.",
+      });
     } catch {
-      setSaveMsg({ kind: "err", text: "Fără conexiune. Nimic nu s-a pierdut, încearcă din nou." });
+      setSaveMsg({
+        kind: "err",
+        text: "Fără conexiune. Nimic nu s-a pierdut, încearcă din nou.",
+      });
     } finally {
       setSaving(false);
     }
@@ -111,6 +121,9 @@ export default function Dashboard() {
               <button className={tab === "meciuri" ? "on" : ""} onClick={() => setTab("meciuri")}>
                 Meciuri ({content.fixtures.length})
               </button>
+              <button className={tab === "raport" ? "on" : ""} onClick={() => setTab("raport")}>
+                Raport
+              </button>
             </div>
 
             {tab === "postere" && (
@@ -134,6 +147,8 @@ export default function Dashboard() {
             {tab === "meciuri" && (
               <FixturesTable fixtures={content.fixtures} onChange={(fixtures) => update((c) => ({ ...c, fixtures }))} />
             )}
+
+            {tab === "raport" && <ReportView slides={content.slides} />}
           </>
         )}
       </main>
@@ -141,19 +156,26 @@ export default function Dashboard() {
       {editing && (
         <PosterEditor
           slide={editing}
-          onChange={(s) => update((c) => ({ ...c, slides: c.slides.map((x) => (x.id === s.id ? s : x)) }))}
+          onChange={(s) =>
+            update((c) => ({
+              ...c,
+              slides: c.slides.map((x) => (x.id === s.id ? s : x)),
+            }))
+          }
           onClose={() => setEditingId(null)}
         />
       )}
 
-      <div className="savebar">
-        <div className={"st " + (saveMsg?.kind === "err" ? "err" : dirty ? "dirty" : "")}>
-          {saveMsg ? saveMsg.text : dirty ? "Modificări nesalvate" : "Totul e salvat"}
+      {!(tab === "raport" && !dirty) && (
+        <div className="savebar">
+          <div className={"st " + (saveMsg?.kind === "err" ? "err" : dirty ? "dirty" : "")}>
+            {saveMsg ? saveMsg.text : dirty ? "Modificări nesalvate" : "Totul e salvat"}
+          </div>
+          <button className="btn primary" onClick={save} disabled={!dirty || saving || !content}>
+            {saving ? "Se salvează…" : "Salvează"}
+          </button>
         </div>
-        <button className="btn primary" onClick={save} disabled={!dirty || saving || !content}>
-          {saving ? "Se salvează…" : "Salvează"}
-        </button>
-      </div>
+      )}
     </>
   );
 }

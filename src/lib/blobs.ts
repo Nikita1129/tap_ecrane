@@ -3,7 +3,8 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { contentSchema, SEED_CONTENT, type Content } from "./content";
 
-// Two stores: "content" holds one JSON document; "images" holds JPG bytes.
+// Stores: "content" holds one JSON document; "images" holds JPG bytes;
+// "stats" holds one small JSON per screen per day (screen time, see lib/stats.ts).
 // Strong consistency so the player sees a save on its next poll, not a minute later.
 //
 // Outside Netlify (plain `next dev` without `netlify dev`) @netlify/blobs has no
@@ -18,6 +19,7 @@ export interface KV {
   setJSON(key: string, value: unknown): Promise<void>;
   getBytes(key: string): Promise<{ data: Bytes; contentType: string } | null>;
   setBytes(key: string, data: Buffer, contentType: string): Promise<void>;
+  list(prefix: string): Promise<string[]>;
 }
 
 function netlifyAvailable(): boolean {
@@ -45,6 +47,10 @@ class NetlifyKV implements KV {
   }
   async setBytes(key: string, data: Buffer, contentType: string) {
     await this.store.set(key, new Blob([new Uint8Array(data)]), { metadata: { contentType } });
+  }
+  async list(prefix: string) {
+    const { blobs } = await this.store.list({ prefix });
+    return blobs.map((b) => b.key);
   }
 }
 
@@ -82,10 +88,17 @@ class FileKV implements KV {
     await fs.mkdir(this.dir, { recursive: true });
     await fs.writeFile(this.p(key), data);
   }
+  async list(prefix: string) {
+    try {
+      return (await fs.readdir(this.dir)).filter((k) => k.startsWith(prefix) && !k.endsWith(".tmp"));
+    } catch {
+      return [];
+    }
+  }
 }
 
 const cache = new Map<string, KV>();
-export function store(name: "content" | "images"): KV {
+export function store(name: "content" | "images" | "stats"): KV {
   let kv = cache.get(name);
   if (!kv) {
     kv = netlifyAvailable() ? new NetlifyKV(name) : new FileKV(name);

@@ -63,6 +63,25 @@ or in the browser on the Android box, full screen. Same URL on every screen.
 - Touch screen, no keyboard: hold the Taproom logo (bottom left) for 4 seconds
   to get a "close the player" dialog.
 
+## Screen time report
+
+Admin → **Raport**: how long each screen ran per day, which hours, and how long
+each poster was on screen (time, showings, % share). "Copiază raportul" gives a
+text summary for Telegram/WhatsApp; "Descarcă CSV" gives the per-day, per-poster table.
+
+- Each player counts seconds while the page is visible (5 s tick; a sleeping or
+  switched-off PC leaves a gap) and sends today's totals to `POST /api/ping`
+  every 5 minutes. One blob per screen per day in the `stats` store
+  (`YYYY-MM-DD__<screen>.json`); re-sends merge by max, so they never double-count.
+- Name a screen once with `/tv?screen=centru` (remembered). Otherwise it gets a
+  random id like `tv-k3x9`. TVs mirrored from one mini PC through the HDMI
+  matrix are one screen.
+- It measures the player running, not whether the TV panel itself was on.
+- Days before this feature shipped have no data. For those, run
+  `scripts/windows/uptime-report.ps1` on the mini PC: it rebuilds PC on/off time
+  per day from the Windows System event log
+  (`powershell -ExecutionPolicy Bypass -File uptime-report.ps1 -Days 30`).
+
 ## How the player stays up
 
 - Every successful `/api/content` response is cached in `localStorage`.

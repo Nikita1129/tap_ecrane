@@ -146,6 +146,7 @@
   var API = '/api/content';
   var POLL_MS = 5*60*1000;
   var CACHE_KEY = 'tv_content_v1';
+  var PING = '/api/ping';
   var ALERT_BEFORE_MIN = 15;
   var LIVE_AFTER_MS = 2*3600*1000;
   var TAGLINE = 'Bere artizanală · BBQ · Fotbal';
@@ -357,6 +358,7 @@
     state.idx = ((state.idx + step) % n + n) % n;
     var s = state.cycle[state.idx];
     renderSlide(s);
+    statShow(s);
     if (!state.paused) state.timer = setTimeout(function(){ show(1); }, Math.max(3,(s.secs||12))*1000);
     debug();
   }
@@ -463,6 +465,72 @@
     else if (e.key==='0' || e.code==='Numpad0'){ setUserScale(1); e.preventDefault(); }
   });
 
+  /* ---------- screen time: running totals for today, sent every 5 min ---------- */
+  // Name a screen with ?screen=centru once; it is remembered. Without it the
+  // player makes up an id (tv-xxxx). Counts only while the page is visible and
+  // the clock keeps ticking: a sleeping or switched-off PC leaves a gap, not time.
+  var STATS_KEY = 'tv_stats_v1', PREV_KEY = 'tv_stats_prev', TICK_S = 5;
+  var SCREEN = (function(){
+    function clean(v){ return String(v||'').toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,32); }
+    var q = clean(qs.get('screen')), v = '';
+    try { v = clean(localStorage.getItem('tv_screen')); } catch(e){}
+    if (q) v = q;
+    if (!v) v = 'tv-' + Math.random().toString(36).slice(2,6);
+    try { localStorage.setItem('tv_screen', v); } catch(e){}
+    return v;
+  })();
+  var stats = null, lastTick = Date.now();
+  function newDay(d){ var h=[]; for (var i=0;i<24;i++) h.push(0); return { screen:SCREEN, date:ymd(d), first:hm(d), last:hm(d), on:0, hours:h, slides:{} }; }
+  function readJSON(k){ try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } }
+  function writeJSON(k, v){ try { if (v) localStorage.setItem(k, JSON.stringify(v)); else localStorage.removeItem(k); } catch(e){} }
+  function validDay(x){ return x && x.date && x.hours && x.hours.length===24 && x.slides && typeof x.on==='number'; }
+  function rollDay(now){
+    if (stats && stats.on > 0) writeJSON(PREV_KEY, stats); // yesterday waits here until the server has it
+    stats = newDay(now);
+  }
+  function statShow(s){
+    if (!stats || PREVIEW || !s || !s.id) return;
+    var r = stats.slides[s.id] || (stats.slides[s.id] = { s:0, n:0 });
+    r.n++;
+  }
+  function post(obj, done){
+    if (!obj || !(obj.on > 0)) return;
+    try {
+      fetch(PING, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(obj), keepalive:true })
+        .then(function(r){ if (done && (r.ok || r.status===400)) done(); }).catch(function(){});
+    } catch(e){}
+  }
+  function sendStats(){
+    var prev = readJSON(PREV_KEY);
+    if (validDay(prev)) post(prev, function(){ writeJSON(PREV_KEY, null); });
+    post(stats);
+  }
+  function statTick(){
+    var now = new Date(), t = now.getTime(), dt = (t - lastTick)/1000;
+    lastTick = t;
+    if (ymd(now) !== stats.date){ rollDay(now); sendStats(); }
+    if (dt > 0 && dt <= TICK_S*6 && document.visibilityState !== 'hidden'){
+      var add = Math.round(dt), h = now.getHours();
+      stats.on = Math.min(86400, stats.on + add);
+      stats.hours[h] = Math.min(3600, stats.hours[h] + add);
+      var s = state.cycle[state.idx];
+      if (s && s.id){ var r = stats.slides[s.id] || (stats.slides[s.id] = { s:0, n:0 }); r.s = Math.min(86400, r.s + add); }
+      stats.last = hm(now);
+    }
+    writeJSON(STATS_KEY, stats);
+  }
+  function startStats(){
+    var saved = readJSON(STATS_KEY), now = new Date();
+    if (validDay(saved)){ saved.screen = SCREEN; stats = saved; if (saved.date !== ymd(now)) rollDay(now); }
+    else stats = newDay(now);
+    setInterval(statTick, TICK_S*1000);
+    setInterval(sendStats, POLL_MS);
+    setTimeout(sendStats, 60*1000);
+    window.addEventListener('pagehide', function(){
+      try { if (navigator.sendBeacon && stats.on > 0) navigator.sendBeacon(PING, JSON.stringify(stats)); } catch(e){}
+    });
+  }
+
   /* ---------- boot ---------- */
   if (PREVIEW){
     // Admin sends { type:'tv-preview', slide } ; we render it and stop.
@@ -475,6 +543,7 @@
     return;
   }
 
+  startStats();
   var cached = loadCache();
   if (cached && Array.isArray(cached.slides)) apply(cached,'cache'); else apply(SEED,'seed');
   tickClock(); show(1);
