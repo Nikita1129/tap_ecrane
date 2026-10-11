@@ -165,6 +165,10 @@ maps short names to the file ("Man City" → Manchester City). A team without a
 crest shows a dark circle with its initials on the TV and a "?" in the admin
 next to the name, so you can see what is missing before match day.
 
+Two rules in `src/lib/crests.ts` cover whole groups: any name ending in "GP"
+or containing "Grand Prix"/"Formula 1" gets the F1 logo, and house events
+(names with trivia, quiz, wings, karaoke, taproom or litra) get the Taproom logo.
+
 ## Uploads
 
 JPG / PNG / HEIC up to 15 MB. The phone downscales the photo before sending
