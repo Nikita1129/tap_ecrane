@@ -73,6 +73,7 @@ text summary for Telegram/WhatsApp; "Descarcă CSV" gives the per-day, per-poste
   switched-off PC leaves a gap) and sends today's totals to `POST /api/ping`
   every 5 minutes. One blob per screen per day in the `stats` store
   (`YYYY-MM-DD__<screen>.json`); re-sends merge by max, so they never double-count.
+- `/tv?debug=1` (what "Vezi TV" in the admin opens) is not counted.
 - Name a screen once with `/tv?screen=centru` (remembered). Otherwise it gets a
   random id like `tv-k3x9`. TVs mirrored from one mini PC through the HDMI
   matrix are one screen.

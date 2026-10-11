@@ -535,6 +535,7 @@
     writeJSON(STATS_KEY, stats);
   }
   function startStats(){
+    if (DEBUG) return; // "Vezi TV" from the admin opens ?debug=1: a phone or laptop is not a screen
     var saved = readJSON(STATS_KEY), now = new Date();
     if (validDay(saved)){ saved.screen = SCREEN; stats = saved; if (saved.date !== ymd(now)) rollDay(now); }
     else stats = newDay(now);
