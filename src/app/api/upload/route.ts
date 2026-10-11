@@ -9,6 +9,9 @@ export const maxDuration = 26;
 const MAX_BYTES = 15 * 1024 * 1024;
 export const TV_W = 1400;
 export const TV_H = 960;
+// "Ecran complet" posters cover the whole TV.
+const FULL_W = 1920;
+const FULL_H = 1080;
 
 function keyFor(): string {
   const d = new Date();
@@ -23,12 +26,14 @@ export async function POST(req: NextRequest) {
 
   let file: File | null = null;
   let fit = "cover";
+  let full = false;
   let crop: { x: number; y: number; w: number; h: number } | null = null;
   try {
     const form = await req.formData();
     const f = form.get("file");
     if (f instanceof File) file = f;
     if (form.get("fit") === "contain") fit = "contain";
+    if (form.get("size") === "full") full = true;
     const c = form.get("crop");
     if (typeof c === "string") {
       const j = JSON.parse(c) as Record<string, unknown>;
@@ -63,7 +68,7 @@ export async function POST(req: NextRequest) {
       }
     }
     out = await img
-      .resize(TV_W, TV_H, contain
+      .resize(full ? FULL_W : TV_W, full ? FULL_H : TV_H, contain
         ? { fit: "contain", background: { r: 11, g: 10, b: 9 } }
         : { fit: "cover", position: "centre" })
       .jpeg({ quality: 80, mozjpeg: true })

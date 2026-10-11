@@ -31,11 +31,11 @@
 
   /* ---- poster stage ---- */
   #stage{position:relative;width:1400px;height:960px;background:#000;overflow:hidden}
-  #stage img{position:absolute;inset:0;width:1400px;height:960px;object-fit:cover;display:block}
+  #stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
   .poster{position:absolute;inset:0;padding:96px;display:flex;flex-direction:column;justify-content:center;gap:36px;
           background:#000 url(/assets/pattern.png) 0 0/1400px 960px no-repeat}
   .poster.hot::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(165,14,26,.55) 0%,rgba(165,14,26,0) 75%)}
-  .poster.hot::after{content:"";position:absolute;left:0;top:0;width:16px;height:960px;background:var(--hot)}
+  .poster.hot::after{content:"";position:absolute;left:0;top:0;width:16px;height:100%;background:var(--hot)}
   .poster>*{position:relative}
   .kgroup{display:flex;flex-direction:column;gap:20px}
   .kgroup .bar{width:96px;height:10px;background:var(--accent)}
@@ -108,6 +108,14 @@
   #band.alert .team .crest{width:64px;height:64px}
   #band.alert .team .crest.none{font-size:22px}
   #band.alert .vs{font-family:var(--display);font-weight:900;font-size:72px;color:var(--time);line-height:1;padding:0 12px}
+
+  /* ---- full-screen poster: the stage covers the whole TV. The bottom band
+     comes back on top only for the red "starts in N min" alert. ---- */
+  #app.full #stage{position:absolute;left:0;top:0;width:1920px;height:1080px;z-index:1}
+  #app.full #side{display:none}
+  #app.full #band{display:none}
+  #app.full #band.alert{display:flex;position:absolute;left:0;right:0;bottom:0;height:120px;z-index:2}
+  body.preview #app.full{width:1920px;height:1080px}
 
   /* ---- debug ---- */
   #dbg{display:none;position:absolute;left:12px;top:12px;background:rgba(0,0,0,.75);color:#9f9;font:16px/1.4 monospace;padding:10px 14px;white-space:pre;z-index:9}
@@ -213,6 +221,7 @@
     return el('div','crest none', t || '?');
   }
   function renderSlide(s){
+    document.getElementById('app').classList.toggle('full', !!s.full);
     while (stage.firstChild) stage.removeChild(stage.firstChild);
     if (s.type==='image'){
       var im = images[s.img];
@@ -465,8 +474,14 @@
       card.appendChild(yes); card.appendChild(no);
       box.appendChild(card); document.body.appendChild(box);
     }
-    brand.addEventListener('pointerdown', function(e){ cancel(); t = setTimeout(ask, 4000); e.preventDefault(); });
-    ['pointerup','pointercancel','pointerleave'].forEach(function(ev){ brand.addEventListener(ev, cancel); });
+    // On a full-screen poster the logo is hidden, so a 4 s hold anywhere works.
+    document.addEventListener('pointerdown', function(e){
+      var full = document.getElementById('app').classList.contains('full');
+      if (!brand.contains(e.target) && !(full && !document.getElementById('exitbox'))) return;
+      cancel(); t = setTimeout(ask, 4000); e.preventDefault();
+    });
+    ['pointerup','pointercancel'].forEach(function(ev){ document.addEventListener(ev, cancel); });
+    brand.addEventListener('pointerleave', cancel);
     brand.addEventListener('contextmenu', function(e){ e.preventDefault(); });
   })();
 

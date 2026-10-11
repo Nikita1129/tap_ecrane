@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Slide } from "@/lib/content";
 import PosterPreview from "./PosterPreview";
 import Cropper, { type CropRect } from "./Cropper";
@@ -22,6 +22,16 @@ export default function PosterEditor({
   const [upl, setUpl] = useState<{ busy: boolean; msg: string; err: boolean }>({ busy: false, msg: "", err: false });
   const [pending, setPending] = useState<{ blob: Blob; url: string; w: number; h: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Width of the current image, to warn when it was cut for the other format.
+  const [imgW, setImgW] = useState(0);
+  useEffect(() => {
+    setImgW(0);
+    if (!slide.img) return;
+    const im = new Image();
+    im.onload = () => setImgW(im.naturalWidth);
+    im.src = slide.img;
+  }, [slide.img]);
+  const wrongSize = slide.type === "image" && !!slide.img && imgW > 0 && (slide.full ? imgW !== 1920 : imgW === 1920);
 
   function addPill() {
     const t = pillDraft.trim();
@@ -60,6 +70,7 @@ export default function PosterEditor({
       const fd = new FormData();
       fd.append("file", blob, "upload.jpg");
       fd.append("fit", fit);
+      fd.append("size", slide.full ? "full" : "normal");
       if (crop) fd.append("crop", JSON.stringify(crop));
       const r = await fetch("/api/upload", { method: "POST", body: fd });
       const j = (await r.json()) as { img?: string; error?: string };
@@ -104,11 +115,35 @@ export default function PosterEditor({
           </button>
         </div>
 
+        <label className="f">Format</label>
+        <div className="seg">
+          <button className={!slide.full ? "on" : ""} onClick={() => set("full", false)}>
+            Cu program
+          </button>
+          <button className={slide.full ? "on" : ""} onClick={() => set("full", true)}>
+            Ecran complet
+          </button>
+        </div>
+        <div className="hint">
+          {slide.full
+            ? "Afișul acoperă tot televizorul (1920×1080), fără program și ceas. Cu 15 min înainte de un meci, banda roșie apare peste afiș."
+            : "Afișul ocupă stânga ecranului (1400×960); programul și ceasul rămân vizibile."}
+        </div>
+        {wrongSize && (
+          <div className="warn">
+            {slide.full
+              ? "Poza actuală e decupată pentru formatul cu program, așa că pe tot ecranul se taie sus și jos. Alege poza din nou ca s-o decupezi pentru 1920×1080."
+              : "Poza actuală e decupată pentru ecran complet, așa că aici se taie pe margini. Alege poza din nou ca s-o decupezi pentru 1400×960."}
+          </div>
+        )}
+
         {slide.type === "image" && (
           <>
             <label className="f">Imagine</label>
             {pending && (
               <Cropper
+                key={slide.full ? "full" : "normal"}
+                full={slide.full}
                 src={pending.url}
                 imgW={pending.w}
                 imgH={pending.h}

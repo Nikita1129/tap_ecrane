@@ -149,6 +149,12 @@ text there. Template with the zones marked: `docs/sablon-afis-1400x960.png`.
 A 16:9 (1920 × 1080) design loses ~150 px on each side; a portrait Instagram
 post loses most of its height, so design for 1400 × 960.
 
+**Full-screen posters** ("Ecran complet" in the editor): **1920 × 1080 px**
+(16:9). They hide the programme panel, clock and bottom band. Keep text out of
+the bottom 120 px: 15 minutes before a match the red "ÎNCEPE ÎN N MIN" band is
+drawn over the poster there. While a full-screen poster is on, holding anywhere
+on a touch screen for 4 s opens the close dialog (the logo is hidden).
+
 ## Team crests
 
 Put crest files in `public/crests/` named after the team, e.g.

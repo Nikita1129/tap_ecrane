@@ -3,11 +3,11 @@ import { useEffect, useRef, useState } from "react";
 
 export type CropRect = { x: number; y: number; w: number; h: number }; // normalised 0..1 of the source image
 
-const ASPECT = 1400 / 960;
 const MAX_ZOOM = 4;
 
 /**
- * Phone-first cropper. The frame has the TV poster aspect (1400x960). The image
+ * Phone-first cropper. The frame has the TV poster aspect (1400x960, or 1920x1080
+ * for full-screen posters). The image
  * is always at least as large as the frame (cover). One finger drags, two fingers
  * pinch, the slider zooms. No canvas work here: we only compute the rectangle
  * and the server cuts it from the full-resolution upload.
@@ -20,6 +20,7 @@ export default function Cropper({
   onConfirm,
   onWhole,
   onCancel,
+  full = false,
 }: {
   src: string;
   imgW: number;
@@ -28,7 +29,9 @@ export default function Cropper({
   onConfirm: (crop: CropRect) => void;
   onWhole: () => void;
   onCancel: () => void;
+  full?: boolean;
 }) {
+  const ASPECT = full ? 1920 / 1080 : 1400 / 960;
   const frameRef = useRef<HTMLDivElement>(null);
   const [frame, setFrame] = useState({ w: 0, h: 0 });
   const [zoom, setZoom] = useState(1);
@@ -145,7 +148,7 @@ export default function Cropper({
     <div className="cropper">
       <div
         ref={frameRef}
-        className="crop-frame"
+        className={"crop-frame" + (full ? " full" : "")}
         style={{ height: frame.h || undefined }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}

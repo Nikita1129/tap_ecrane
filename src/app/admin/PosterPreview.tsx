@@ -9,15 +9,16 @@ export default function PosterPreview({ slide }: { slide: Slide }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const [scale, setScale] = useState(0.25);
   const [ready, setReady] = useState(false);
+  const W = slide.full ? 1920 : 1400;
 
   useEffect(() => {
     const el = box.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setScale(el.clientWidth / 1400));
+    const ro = new ResizeObserver(() => setScale(el.clientWidth / W));
     ro.observe(el);
-    setScale(el.clientWidth / 1400);
+    setScale(el.clientWidth / W);
     return () => ro.disconnect();
-  }, []);
+  }, [W]);
 
   const json = JSON.stringify(slide);
   useEffect(() => {
@@ -27,7 +28,7 @@ export default function PosterPreview({ slide }: { slide: Slide }) {
 
   return (
     <>
-      <div className="preview" ref={box}>
+      <div className={"preview" + (slide.full ? " full" : "")} ref={box}>
         <iframe
           ref={frame}
           src="/tv.html?preview=1"
@@ -36,7 +37,10 @@ export default function PosterPreview({ slide }: { slide: Slide }) {
           onLoad={() => setReady(true)}
         />
       </div>
-      <div className="preview-lbl">Previzualizare 1:1 cu ecranul (1400×960). Textul care nu încape aici nu încape nici pe perete.</div>
+      <div className="preview-lbl">
+        Previzualizare 1:1 cu ecranul ({slide.full ? "tot televizorul, 1920×1080" : "1400×960"}). Textul care nu încape
+        aici nu încape nici pe perete.
+      </div>
     </>
   );
 }

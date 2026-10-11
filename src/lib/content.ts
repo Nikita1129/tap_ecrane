@@ -15,6 +15,7 @@ export const slideSchema = z.object({
   id: z.string().min(1),
   type: z.enum(["image", "text"]),
   active: z.boolean(),
+  full: z.boolean().default(false), // whole TV (1920x1080), no programme panel or bottom band
   img: z.string().default(""),
   kicker: z.string().default(""),
   title: z.string().default(""),
@@ -64,6 +65,7 @@ export function blankSlide(type: Slide["type"] = "text"): Slide {
     id: newId("s"),
     type,
     active: true,
+    full: false,
     img: "",
     kicker: "",
     title: "",
