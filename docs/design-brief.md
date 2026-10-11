@@ -98,7 +98,7 @@ Testul real: se citește de la 6 metri.
 
 ### 4.4 Coloana meciuri
 
-- Titlu de secțiune (acum „Următoarele meciuri”).
+- Titlu de secțiune (acum „Program”).
 - Până la 5 rânduri, sortate după ora de start. Fiecare: **când** („Azi 21:00”, „Mâine 19:30”, „Vin 20.09 21:00”), **gazde – oaspeți**, **competiție** (opțional).
 - Un meci rămâne în listă ~2 ore după start, marcat **LIVE**.
 - Stare goală: „Niciun meci programat”.

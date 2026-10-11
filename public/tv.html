@@ -121,7 +121,7 @@
 <body>
 <div id="app">
   <div id="stage"></div>
-  <aside id="side"><h2>Următoarele meciuri</h2><div class="barwrap"><div class="bar"></div></div><div id="fxlist"></div><div class="fade"></div></aside>
+  <aside id="side"><h2>Program</h2><div class="barwrap"><div class="bar"></div></div><div id="fxlist"></div><div class="fade"></div></aside>
   <footer id="band">
     <div id="brand"><img src="/assets/logo.png" alt="Taproom by Litra &amp; Friends" width="164" height="164"></div>
     <div class="divider"></div>
@@ -280,7 +280,7 @@
     var list = upcoming(state.content.fixtures||[], now).slice(0,3); // 3 cards with crests fit the 960px column
     var box = document.getElementById('fxlist');
     while (box.firstChild) box.removeChild(box.firstChild);
-    if (!list.length){ box.appendChild(el('div','empty','Niciun meci programat')); }
+    if (!list.length){ box.appendChild(el('div','empty','Nimic programat')); }
     list.forEach(function(x){
       var st = fxState(x, now);
       var row = el('div','fx'+(st!=='later'?' hot':''));
