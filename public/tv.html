@@ -383,9 +383,24 @@
         if (!c || !Array.isArray(c.slides)) throw new Error('bad payload');
         state.lastOk = new Date(); state.lastErr = null;
         saveCache(c); apply(c,'api'); debug();
+        checkBuild(c.build);
       })
       .catch(function(e){ state.lastErr = String(e && e.message || e); debug(); })
       .then(function(){ if (to) clearTimeout(to); });
+  }
+
+  // New player code deployed? Reload once, while we know the server answers.
+  // Content is already in the cache and today's screen time in localStorage.
+  var BUILD = null;
+  function checkBuild(b){
+    if (!b || PREVIEW) return;
+    if (BUILD === null){ BUILD = b; return; }
+    if (b === BUILD) return;
+    var last = 0;
+    try { last = +sessionStorage.getItem('tv_reload_at') || 0; } catch(e){}
+    if (Date.now() - last < 10*60*1000) return; // never loop
+    try { sessionStorage.setItem('tv_reload_at', String(Date.now())); } catch(e){}
+    location.reload();
   }
 
   function debug(){

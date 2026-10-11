@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Fixed at build time. The player compares it on every poll and reloads itself
+  // when a new version is deployed, so TVs never keep running old code.
+  env: { PLAYER_BUILD: process.env.COMMIT_REF || String(Date.now()) },
   // sharp ships a native binary; keep it out of the bundler.
   serverExternalPackages: ["sharp", "@netlify/blobs"],
   async rewrites() {

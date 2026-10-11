@@ -23,7 +23,7 @@ export async function GET() {
   // Crest URLs are derived from team names at read time, never stored.
   const fixtures = content.fixtures.map((f) => ({ ...f, homeCrest: crestFor(f.home), awayCrest: crestFor(f.away) }));
   return NextResponse.json(
-    { ...content, fixtures },
+    { ...content, fixtures, build: process.env.PLAYER_BUILD ?? "" },
     {
       headers: {
         "Cache-Control": "no-store",
