@@ -9,15 +9,28 @@ export const dynamic = "force-dynamic";
 
 // Public. Polled by every TV every 5 minutes.
 export async function GET() {
-  const content = await readContent();
+  let content;
+  try {
+    content = await readContent();
+  } catch (e) {
+    // Never answer with seed here: the admin would load it and could save it over the real content.
+    console.error("GET /api/content failed:", e);
+    return NextResponse.json(
+      { error: `Stocarea nu răspunde: ${e instanceof Error ? e.message : String(e)}` },
+      { status: 503, headers: { "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" } },
+    );
+  }
   // Crest URLs are derived from team names at read time, never stored.
   const fixtures = content.fixtures.map((f) => ({ ...f, homeCrest: crestFor(f.home), awayCrest: crestFor(f.away) }));
-  return NextResponse.json({ ...content, fixtures }, {
-    headers: {
-      "Cache-Control": "no-store",
-      "Access-Control-Allow-Origin": "*",
+  return NextResponse.json(
+    { ...content, fixtures },
+    {
+      headers: {
+        "Cache-Control": "no-store",
+        "Access-Control-Allow-Origin": "*",
+      },
     },
-  });
+  );
 }
 
 // Authenticated. Replaces the whole document. One editor, no merging.

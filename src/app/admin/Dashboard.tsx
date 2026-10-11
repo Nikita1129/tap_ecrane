@@ -23,12 +23,36 @@ export default function Dashboard() {
     text: string;
   } | null>(null);
 
-  useEffect(() => {
-    fetch("/api/content", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((c: Content) => setContent({ ...c, fixtures: sortFixtures(c.fixtures) }))
-      .catch(() => setLoadErr("Nu am putut încărca conținutul."));
+  const load = useCallback(async () => {
+    setLoadErr("");
+    let reason = "";
+    // A cold function or a Blobs hiccup can fail once; try three times before giving up.
+    for (let i = 0; i < 3; i++) {
+      if (i) await new Promise((res) => setTimeout(res, 1500 * i));
+      try {
+        const r = await fetch("/api/content", { cache: "no-store" });
+        const text = await r.text();
+        if (!r.ok) {
+          let msg = text.slice(0, 160);
+          try {
+            msg = (JSON.parse(text) as { error?: string }).error || msg;
+          } catch {}
+          reason = `HTTP ${r.status}${msg ? `: ${msg}` : ""}`;
+          continue;
+        }
+        const c = JSON.parse(text) as Content;
+        setContent({ ...c, fixtures: sortFixtures(c.fixtures) });
+        return;
+      } catch (e) {
+        reason = e instanceof Error ? e.message : String(e);
+      }
+    }
+    setLoadErr(`Nu am putut încărca conținutul (${reason || "fără răspuns"}).`);
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   // Warn before leaving with unsaved changes.
   useEffect(() => {
@@ -110,7 +134,14 @@ export default function Dashboard() {
       </header>
 
       <main className="wrap">
-        {loadErr && <div className="err">{loadErr}</div>}
+        {loadErr && (
+          <div className="err">
+            {loadErr}{" "}
+            <button className="btn sm" onClick={load}>
+              Reîncearcă
+            </button>
+          </div>
+        )}
         {!content && !loadErr && <div className="empty">Se încarcă…</div>}
         {content && (
           <>
