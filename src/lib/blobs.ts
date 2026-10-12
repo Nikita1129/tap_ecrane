@@ -97,14 +97,12 @@ class FileKV implements KV {
   }
 }
 
-const cache = new Map<string, KV>();
+// Never cache the Netlify store: getStore() captures the Blobs access token of
+// the current request, and that token expires. A warm function instance reusing
+// it hours later fails with "Failed to decode token: Token expired".
+// getStore() is cheap (no network), so open it fresh on every call.
 export function store(name: "content" | "images" | "stats"): KV {
-  let kv = cache.get(name);
-  if (!kv) {
-    kv = netlifyAvailable() ? new NetlifyKV(name) : new FileKV(name);
-    cache.set(name, kv);
-  }
-  return kv;
+  return netlifyAvailable() ? new NetlifyKV(name) : new FileKV(name);
 }
 
 export async function readContent(): Promise<Content> {
