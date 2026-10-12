@@ -106,7 +106,14 @@ export function store(name: "content" | "images" | "stats"): KV {
 }
 
 export async function readContent(): Promise<Content> {
-  const raw = await store("content").getJSON(CONTENT_KEY);
+  let raw: unknown;
+  try {
+    raw = await store("content").getJSON(CONTENT_KEY);
+  } catch {
+    // One short retry with a fresh store before giving up (transient Blobs errors).
+    await new Promise((r) => setTimeout(r, 400));
+    raw = await store("content").getJSON(CONTENT_KEY);
+  }
   if (raw) {
     const parsed = contentSchema.safeParse(raw);
     if (parsed.success) return parsed.data;

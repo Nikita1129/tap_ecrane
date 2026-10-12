@@ -83,6 +83,24 @@ text summary for Telegram/WhatsApp; "Descarcă CSV" gives the per-day, per-poste
   per day from the Windows System event log
   (`powershell -ExecutionPolicy Bypass -File uptime-report.ps1 -Days 30`).
 
+## Health check and alerts
+
+`GET /api/health` (public) answers **200** when storage works and every real
+screen (one that ran an hour or more today) reported in the last 20 minutes,
+and **503** with a list of `problems` otherwise.
+
+`netlify/functions/watchdog.mjs` is a Netlify scheduled function that calls it
+every 10 minutes. When the state changes (broken, or fixed again) it sends one
+Telegram message. Set `TELEGRAM_BOT_TOKEN` (from @BotFather) in Netlify's
+environment variables and send the bot any message; `TELEGRAM_CHAT_ID` is
+optional (otherwise the chat that last wrote to the bot is used; in a group,
+send `/start@<bot>`). Without a token it still runs and records its state,
+visible under `watchdog` in `/api/health`.
+
+The watchdog lives on Netlify, so it cannot report Netlify itself being down.
+For that, point a free external monitor (UptimeRobot, Better Stack) at
+`/api/health`.
+
 ## How the player stays up
 
 - Every successful `/api/content` response is cached in `localStorage`.
